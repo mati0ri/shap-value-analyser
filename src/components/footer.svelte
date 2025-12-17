@@ -2,9 +2,7 @@
     import { store } from "../rune/store.svelte";
     import { create_data } from "../functions/create_data";
 
-    $inspect(store.selectedFeatures)
-    $inspect(store.merges)
-
+    $inspect(store.filtered_graph_data)
 
     function handleMerge() {
         const selected = store.selectedFeatures;

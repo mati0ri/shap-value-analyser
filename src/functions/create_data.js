@@ -41,7 +41,6 @@ function add_feature_to_graph(feature) {
       deterministic_effect: compute_deterministic_effect(feature),
       isMerge,
       children,
-      show: true,
     }
   ];
 }

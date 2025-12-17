@@ -8,7 +8,7 @@ class Store {
     hoveredGraph = $state([]);
     hoveredMatrix = $state([]);
 
-    
+
     // datasets
     x = $state([]);
     y = [];
@@ -18,6 +18,14 @@ class Store {
 
     // other
     allFeatures = [];
+    hiddenFeatures = $state([]);
+    filtered_graph_data = $derived.by(() =>
+        this.graph_data.filter(d =>
+            !this.hiddenFeatures.includes(d.feature)
+        )
+    );
+    
+
 
     // colors
     colorStroke = "#a1a1a1";

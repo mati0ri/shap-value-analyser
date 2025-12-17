@@ -11,6 +11,17 @@
     let height = 700;
     let padding = 100;
 
+    function toggleHidden(feature) {
+        const hidden = store.hiddenFeatures;
+        const i = hidden.indexOf(feature);
+
+        if (i === -1) {
+            hidden.push(feature);
+        } else {
+            hidden.splice(i, 1);
+        }
+    }
+
     function drawMatrix() {
         const data = store.graph_data;
 
@@ -79,6 +90,43 @@
             .attr("font-size", "15px")
             .text((d) => (d.length > 6 ? d.slice(0, 6) + "..." : d));
 
+        // Boutons hide / show (pour simples + merges)
+        svg.append("g")
+            .selectAll("g")
+            .data(rowLabels)
+            .join("g")
+            .attr(
+                "transform",
+                (d) =>
+                    `translate(${width + 5}, ${y(d) + y.bandwidth() / 2 - 10})`,
+            )
+            .attr("cursor", "pointer")
+            .on("click", (event, feature) => {
+                toggleHidden(feature);
+                drawMatrix(); // redraw immédiat
+            })
+            .each(function (d) {
+                const g = d3.select(this);
+
+                const isHidden = store.hiddenFeatures.includes(d);
+
+                // fond vert
+                g.append("rect")
+                    .attr("width", 30)
+                    .attr("height", 30)
+                    .attr("rx", 5)
+                    .attr("ry", 5)
+                    .attr("fill", isHidden ? "#cfcfcf" : store.colorStroke); // gris si hidden
+
+                // icône
+                g.append("image")
+                    .attr("href", isHidden ? "/icones/eye-closed.svg" : "/icones/eye-open.svg")
+                    .attr("width", 24)
+                    .attr("height", 24)
+                    .attr("x", 3)
+                    .attr("y", 4);
+            });
+
         // Boutons delete
         svg.append("g")
             .selectAll("g")
@@ -87,7 +135,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${width + 15}, ${y(d) + y.bandwidth() / 2 - 10})`,
+                    `translate(${width + 40}, ${y(d) + y.bandwidth() / 2 - 10})`,
             ) // centré verticalement
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -120,7 +168,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${width + 60}, ${y(d) + y.bandwidth() / 2 - 10})`,
+                    `translate(${width + 75}, ${y(d) + y.bandwidth() / 2 - 10})`,
             )
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -184,6 +232,19 @@
             });
         }
 
+        // ligne de séparation simples / merges
+        const separatorY =
+            y(simpleFeatures[simpleFeatures.length - 1]) + y.bandwidth();
+
+        svg.append("line")
+            .attr("x1", padding - 70) // dépasse à gauche pour inclure les labels
+            .attr("x2", width) // dépasse légèrement à droite
+            .attr("y1", separatorY)
+            .attr("y2", separatorY)
+            .attr("stroke", store.colorStroke)
+            .attr("stroke-width", 1)
+            .attr("pointer-events", "none");
+
         // cellules
         const cellsData = rowLabels.flatMap((row, r) =>
             colLabels.map((col, c) => {
@@ -206,20 +267,6 @@
                 return { row, col, isDiagonal, isMergeChild, fullData };
             }),
         );
-
-        // fond lignes merges
-        const rowBackgrounds = svg.append("g").attr("class", "row-backgrounds");
-
-        mergeFeatures.forEach((feature) => {
-            rowBackgrounds
-                .append("rect")
-                .attr("x", padding)
-                .attr("y", y(feature))
-                .attr("width", width - padding)
-                .attr("height", y.bandwidth())
-                .attr("fill", "rgba(199, 30, 255, 0.05)")
-                .attr("pointer-events", "none");
-        });
 
         // fond 1 ligne sur 2
         const rowStriping = svg.append("g").attr("class", "row-striping");
@@ -273,9 +320,7 @@
                         (f.isMerge &&
                             f.children.every((c) => selected.includes(c))));
 
-                return isSelected
-                    ? 4
-                    : 1.5;
+                return isSelected ? 4 : 1.5;
             })
             .attr("class", "gold-point")
             .attr("fill", (d) => {

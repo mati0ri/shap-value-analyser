@@ -10,7 +10,7 @@
 
         // ########### SETUP ###########
 
-        const data = store.graph_data;
+        const data = store.filtered_graph_data;
 
         // a revoir pour rendre responsive
         const width = 1100;
