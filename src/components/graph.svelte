@@ -220,7 +220,7 @@
                                 .attr("y1", y(d.feature_importance))
                                 .attr("x2", x(child.deterministic_effect))
                                 .attr("y2", y(child.feature_importance))
-                                .attr("stroke", store.colorStroke+60)
+                                .attr("stroke", store.colorStroke + 60)
                                 .attr("stroke-width", 2)
                                 .attr("stroke-opacity", 0.5);
                         });
@@ -232,7 +232,6 @@
         // ########### FONCTIONS HOVER ###########
 
         function hoverCircle(d) {
-
             // tooltip
             tooltip
                 .style("display", "block")
@@ -422,7 +421,6 @@
         }
 
         function cleanHoverCircle() {
-
             tooltip.style("display", "none");
 
             guideLineX.style("display", "none");
@@ -511,17 +509,27 @@
                 g.append("rect")
                     .attr("x", -7)
                     .attr("y", -7)
-                    .attr("width", 14)
-                    .attr("height", 14)
+                    .attr("width", store.pointSize * 2)
+                    .attr("height", store.pointSize * 2)
                     .attr("fill", colorScale(d.direction))
                     .attr("stroke", store.colorStroke)
                     .attr("stroke-opacity", 1);
             } else {
                 g.append("circle")
-                    .attr("r", 7)
+                    .attr("r", store.pointSize)
                     .attr("fill", colorScale(d.direction))
                     .attr("stroke", store.colorStroke)
                     .attr("stroke-opacity", 1);
+            }
+
+            if (!store.hideLabels) {
+                g.append("text")
+                    .attr("y", store.pointSize + 15) // sous le point
+                    .attr("text-anchor", "middle")
+                    .attr("font-size", "12px")
+                    .attr("fill", "#333")
+                    .attr("pointer-events", "none") // ne gêne pas hover/click
+                    .text(d.feature);
             }
 
             updateMergeSelectedLinks();

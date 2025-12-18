@@ -7,6 +7,8 @@ class Store {
     clickedFeature = $state(null);
     hoveredGraph = $state([]);
     hoveredMatrix = $state([]);
+    hideLabels = $state(false);
+    pointSize = $state(7);
 
 
     // datasets
@@ -24,7 +26,7 @@ class Store {
             !this.hiddenFeatures.includes(d.feature)
         )
     );
-    
+
 
 
     // colors
@@ -57,8 +59,12 @@ class Store {
             return newRow;
         });
 
+        // Robust y assignment
+        const yKeys = Object.keys(data.y[0]);
+        const yKey = yKeys[0];
+        this.y = data.y.map(r => +r[yKey]);
+
         // Other init
-        this.y = data.y.map(r => +r.survived);
         this.sv = data.sv;
         this.allFeatures = keys;
         create_data(this.allFeatures)

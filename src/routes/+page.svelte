@@ -1,8 +1,8 @@
 <script>
-    import Header from "./../components/header.svelte";
-    import Footer from "./../components/footer.svelte";
-    import Graph from "./../components/graph.svelte";
-    import Matrix from "./../components/matrix.svelte";
+    import Header from "../components/header.svelte";
+    import Footer from "../components/footer.svelte";
+    import Graph from "../components/graph.svelte";
+    import Matrix from "../components/matrix.svelte";
 
     import { store } from "../rune/store.svelte";
     let { data } = $props();
@@ -27,7 +27,6 @@
         flex-direction: column;
         height: 100vh;
         width: 100%;
-        /* background-color: antiquewhite; */
     }
 
     .middle {
@@ -36,6 +35,5 @@
         flex-direction: row;
         padding: 30px;
         gap: 40px;
-        /* background-color: aquamarine; */
     }
 </style>

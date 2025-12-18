@@ -2,7 +2,7 @@
     import { store } from "../rune/store.svelte";
     import { create_data } from "../functions/create_data";
 
-    $inspect(store.filtered_graph_data)
+    $inspect(store.filtered_graph_data);
 
     function handleMerge() {
         const selected = store.selectedFeatures;
@@ -19,7 +19,7 @@
         const alreadyExists = store.merges.some(
             (m) =>
                 m.length === sortedSelected.length &&
-                [...m].sort().every((v, i) => v === sortedSelected[i])
+                [...m].sort().every((v, i) => v === sortedSelected[i]),
         );
 
         if (alreadyExists) {
@@ -44,13 +44,13 @@
 <div class="footer">
     {#if store.selectedFeatures.length > 1}
         <div>
-            <button class="merge" on:click={handleMerge}>
+            <button class="merge" onclick={handleMerge}>
                 <img src="/icones/merge.svg" alt="merge" class="icon" />
                 Merge {store.selectedFeatures.length} features
             </button>
         </div>
         <div>
-            <button class="unselect" on:click={unselectAllFeatures}>
+            <button class="unselect" onclick={unselectAllFeatures}>
                 <img src="/icones/unselect.svg" alt="unselect" class="icon" />
                 Unselect all
             </button>
@@ -58,6 +58,25 @@
     {:else}
         <p>Select 2 features or more to start merging</p>
     {/if}
+    <div>
+        <button
+            class="unselect"
+            onclick={(store.hideLabels = !store.hideLabels)}
+        >
+            {store.hideLabels ? "Show" : "Hide"} labels
+        </button>
+    </div>
+    <div class="slider-container">
+        <label for="pointSizeSlider">Point radius</label>
+        <input
+            id="pointSizeSlider"
+            type="range"
+            min="2"
+            max="12"
+            step="1"
+            bind:value={store.pointSize}
+        />
+    </div>
 </div>
 
 <style>
@@ -108,4 +127,13 @@
         width: 16px;
         height: 16px;
     }
+
+    .slider-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        font-size: 14px;
+    }
+
+
 </style>

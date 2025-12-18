@@ -1,6 +1,3 @@
-<script>
-</script>
-
 <div class="header">
   <h1>SHAP value analyzer</h1>
 </div>
@@ -12,5 +9,6 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    gap: 20px;
   }
 </style>
