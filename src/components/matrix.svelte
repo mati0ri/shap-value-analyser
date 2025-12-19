@@ -4,11 +4,12 @@
     import { onMount } from "svelte";
     import { deleteMerge } from "../functions/create_data";
     import { renameMerge } from "../functions/create_data";
+    import { create_data, cleanGhost } from "../functions/create_data";
 
     let container;
 
-    let width = 600;
-    let height = 700;
+    let width = 400;
+    let height = 550;
     let padding = 100;
 
     function toggleHidden(feature) {
@@ -22,9 +23,9 @@
         }
     }
 
-    function drawMatrix() {
-        const data = store.graph_data;
+    const data = $derived.by(() => store.graph_data.filter((d) => !d.isGhost));
 
+    function drawMatrix() {
         if (!data) return;
 
         // tri simple vs merge
@@ -120,7 +121,12 @@
 
                 // icône
                 g.append("image")
-                    .attr("href", isHidden ? "/icones/eye-closed.svg" : "/icones/eye-open.svg")
+                    .attr(
+                        "href",
+                        isHidden
+                            ? "/icones/eye-closed.svg"
+                            : "/icones/eye-open.svg",
+                    )
                     .attr("width", 24)
                     .attr("height", 24)
                     .attr("x", 3)
@@ -377,6 +383,12 @@
                 } else {
                     const i = selected.indexOf(f.feature);
                     i === -1 ? selected.push(f.feature) : selected.splice(i, 1);
+                }
+
+                if (selected.length >= 2) {
+                    create_data([selected], true);
+                } else {
+                    cleanGhost();
                 }
 
                 updateSimpleToMergeLinks();

@@ -10,13 +10,31 @@ class Store {
     hideLabels = $state(false);
     pointSize = $state(7);
 
+    isSelectedNew = $derived.by(() => {
+        const selected = this.selectedFeatures;
+
+        // Pas assez de features pour créer un merge
+        if (selected.length < 2) return false;
+
+        const selectedSorted = [...selected].sort();
+
+        return !this.merges.some(merge => {
+            if (merge.length !== selectedSorted.length) return false;
+
+            const mergeSorted = [...merge].sort();
+
+            return mergeSorted.every(
+                (value, index) => value === selectedSorted[index]
+            );
+        });
+    });
+
 
     // datasets
     x = $state([]);
     y = [];
     sv = $state([]);
     graph_data = $state([]);
-
 
     // other
     allFeatures = [];
@@ -27,13 +45,12 @@ class Store {
         )
     );
 
-
-
     // colors
     colorStroke = "#a1a1a1";
     colorSelectedStroke = "#d451fc";
     colorHoveredStroke = "#707070";
     colorClickedStroke = "#e04338";
+
 
     initialize(data) {
 
@@ -58,6 +75,7 @@ class Store {
             }
             return newRow;
         });
+
 
         // Robust y assignment
         const yKeys = Object.keys(data.y[0]);

@@ -3,9 +3,49 @@ import { compute_feature_importance } from "./feature_importance";
 import { compute_deterministic_effect } from "./deterministic_effect";
 import { compute_direction } from "./direction";
 
-function add_x_merge(feature) {
-  const vars = Array.isArray(feature) ? feature : [feature];
+// Helpers
 
+function featureKey(feature) {
+  return Array.isArray(feature) ? feature.join("+") : feature;
+}
+
+function xHasFeature(feature) {
+  const col = featureKey(feature);
+  return store.x.length > 0 && col in store.x[0];
+}
+
+function svHasFeature(feature) {
+  const col = "shap_" + featureKey(feature);
+  return store.sv.length > 0 && col in store.sv[0];
+}
+
+export function cleanGhost() {
+  console.log("[clean ghost]");
+  store.graph_data = store.graph_data.filter(d => !d.isGhost);
+}
+
+function findGhost() {
+  return store.graph_data.find(d => d.isGhost);
+}
+
+function maxFeatureImportance() {
+  return Math.max(
+    0,
+    ...store.graph_data
+      .filter(d => !d.isGhost)
+      .map(d => d.feature_importance)
+  );
+}
+
+
+
+
+// "Real" functions
+
+function add_x_merge(feature) {
+  if (xHasFeature(feature)) return;
+
+  const vars = Array.isArray(feature) ? feature : [feature];
   const col = vars.join("+");
 
   for (let i = 0; i < store.x.length; i++) {
@@ -15,9 +55,11 @@ function add_x_merge(feature) {
   }
 }
 
-function add_sv_merge(feature) {
-  const vars = Array.isArray(feature) ? feature : [feature];
 
+function add_sv_merge(feature) {
+  if (svHasFeature(feature)) return;
+
+  const vars = Array.isArray(feature) ? feature : [feature];
   const col = "shap_" + vars.join("+");
 
   for (let i = 0; i < store.sv.length; i++) {
@@ -27,31 +69,69 @@ function add_sv_merge(feature) {
   }
 }
 
-function add_feature_to_graph(feature) {
 
-  const isMerge = Array.isArray(feature) && feature.length > 1;
-  const children = isMerge ? [...feature] : [];
+
+function add_feature_to_graph(feature, ghost = false) {
+  console.log("[add feature to graph] avec", feature);
+
+  const key = featureKey(feature);
+
+  add_x_merge(feature);
+  add_sv_merge(feature);
+
+  cleanGhost();
+
+  const rawImportance = compute_feature_importance(feature);
+  const maxCurrent = maxFeatureImportance();
+
+  const feature_importance = ghost
+    ? Math.min(rawImportance, maxCurrent)
+    : rawImportance;
+
+  if (ghost && feature_importance <= 0) return;
 
   store.graph_data = [
     ...store.graph_data,
     {
-      feature: isMerge ? feature.join("+") : feature,
-      feature_importance: compute_feature_importance(feature),
+      feature: key,
+      feature_importance,
       direction: compute_direction(feature),
       deterministic_effect: compute_deterministic_effect(feature),
-      isMerge,
-      children,
+      isMerge: Array.isArray(feature) && feature.length > 1,
+      isGhost: ghost,
+      children: Array.isArray(feature) ? [...feature] : []
     }
   ];
 }
 
 
-export function create_data(new_merges) {
 
+// function add_ghost(feature) {
+
+//   console.log("[add ghost] avec", feature);
+
+//   add_x_merge(feature);
+//   add_sv_merge(feature);
+
+//   cleanGhost();
+
+//   store.graph_data = [
+//     ...store.graph_data,
+//     {
+//       feature: featureKey(feature),
+//       feature_importance: compute_feature_importance(feature),
+//       direction: compute_direction(feature),
+//       deterministic_effect: compute_deterministic_effect(feature),
+//       isMerge: Array.isArray(feature) && feature.length > 1,
+//       isGhost: true,
+//       children: Array.isArray(feature) ? [...feature] : []
+//     }
+//   ];
+// }
+
+export function create_data(new_merges, ghost = false) {
   for (const feature of new_merges) {
-    add_sv_merge(feature);
-    add_x_merge(feature);
-    add_feature_to_graph(feature);
+    add_feature_to_graph(feature, ghost);
   }
 }
 

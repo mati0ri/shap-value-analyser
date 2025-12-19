@@ -2,6 +2,7 @@
     import * as d3 from "d3";
     import { onMount } from "svelte";
     import { store } from "../rune/store.svelte";
+    import { create_data, cleanGhost } from "../functions/create_data";
 
     let graphDiv;
 
@@ -13,8 +14,8 @@
         const data = store.filtered_graph_data;
 
         // a revoir pour rendre responsive
-        const width = 1100;
-        const height = 800;
+        const width = 850;
+        const height = 700;
         const margin = { top: 20, right: 110, bottom: 80, left: 90 };
 
         const wrapper = d3
@@ -479,6 +480,7 @@
             )
             .style("cursor", "pointer")
             .on("click", (event, d) => {
+                if (d.isGhost) return;
                 const selected = store.selectedFeatures;
 
                 if (d.isMerge) {
@@ -491,9 +493,16 @@
                     else selected.push(d.feature);
                 }
 
+                if (selected.length >= 2) {
+                    create_data([selected], true);
+                } else {
+                    cleanGhost();
+                }
+
                 updateMergeSelectedLinks();
             })
             .on("mouseenter", (event, d) => {
+                if (d.isGhost) return;
                 store.hoveredGraph = [d.feature];
                 hoverCircle(d);
             })
@@ -505,10 +514,26 @@
         points.each(function (d) {
             const g = d3.select(this);
 
-            if (d.isMerge) {
+            if (d.isGhost) {
+                if (store.isSelectedNew) {
+                    g.append("path")
+                        .attr(
+                            "d",
+                            d3
+                                .symbol()
+                                .type(d3.symbolTriangle)
+                                .size(Math.pow(store.pointSize * 2, 2)),
+                        )
+                        .attr("fill", colorScale(d.direction))
+                        .attr("stroke", store.colorStroke)
+                        .attr("stroke-dasharray", "4 2")
+                        .attr("stroke-width", 1.5)
+                        .attr("pointer-events", "none");
+                }
+            } else if (d.isMerge) {
                 g.append("rect")
-                    .attr("x", -7)
-                    .attr("y", -7)
+                    .attr("x", -store.pointSize)
+                    .attr("y", -store.pointSize)
                     .attr("width", store.pointSize * 2)
                     .attr("height", store.pointSize * 2)
                     .attr("fill", colorScale(d.direction))
@@ -522,13 +547,13 @@
                     .attr("stroke-opacity", 1);
             }
 
-            if (!store.hideLabels) {
+            if (!store.hideLabels && !d.isGhost) {
                 g.append("text")
-                    .attr("y", store.pointSize + 15) // sous le point
+                    .attr("y", store.pointSize + 15)
                     .attr("text-anchor", "middle")
                     .attr("font-size", "12px")
                     .attr("fill", "#333")
-                    .attr("pointer-events", "none") // ne gêne pas hover/click
+                    .attr("pointer-events", "none")
                     .text(d.feature);
             }
 

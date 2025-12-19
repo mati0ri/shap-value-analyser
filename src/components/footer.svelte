@@ -1,6 +1,6 @@
 <script>
     import { store } from "../rune/store.svelte";
-    import { create_data } from "../functions/create_data";
+    import { cleanGhost, create_data } from "../functions/create_data";
 
     $inspect(store.filtered_graph_data);
 
@@ -38,17 +38,20 @@
 
     function unselectAllFeatures() {
         store.selectedFeatures = [];
+        cleanGhost();
     }
 </script>
 
 <div class="footer">
     {#if store.selectedFeatures.length > 1}
+        {#if store.isSelectedNew == true}
         <div>
             <button class="merge" onclick={handleMerge}>
                 <img src="/icones/merge.svg" alt="merge" class="icon" />
                 Merge {store.selectedFeatures.length} features
             </button>
         </div>
+        {/if}
         <div>
             <button class="unselect" onclick={unselectAllFeatures}>
                 <img src="/icones/unselect.svg" alt="unselect" class="icon" />
