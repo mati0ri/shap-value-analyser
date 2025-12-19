@@ -1,4 +1,4 @@
-import { create_data } from "../functions/create_data";
+import { create_data, findInterestingMerges } from "../functions/create_data";
 
 class Store {
     // vis
@@ -45,6 +45,8 @@ class Store {
         )
     );
 
+    recomendedMerges = $state(null);
+
     // colors
     colorStroke = "#a1a1a1";
     colorSelectedStroke = "#d451fc";
@@ -52,7 +54,7 @@ class Store {
     colorClickedStroke = "#e04338";
 
 
-    initialize(data) {
+    async initialize(data) {
 
         // x normalization
         const x = data.x;
@@ -77,15 +79,20 @@ class Store {
         });
 
 
-        // Robust y assignment
+        // y
         const yKeys = Object.keys(data.y[0]);
         const yKey = yKeys[0];
         this.y = data.y.map(r => +r[yKey]);
 
-        // Other init
+        // sv 
         this.sv = data.sv;
+
+        // others
         this.allFeatures = keys;
+
         create_data(this.allFeatures)
+        this.recomendedMerges = findInterestingMerges;
+
     }
 
 }

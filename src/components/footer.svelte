@@ -3,6 +3,8 @@
     import { cleanGhost, create_data } from "../functions/create_data";
 
     $inspect(store.filtered_graph_data);
+    $inspect(store.recomendedMerges);
+
 
     function handleMerge() {
         const selected = store.selectedFeatures;

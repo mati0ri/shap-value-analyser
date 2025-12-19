@@ -18,8 +18,8 @@ function csvToArray(csv) {
 export function load() {
 
     // const base = path.join(process.cwd(), 'src/data/Bio10');
-    const base = path.join(process.cwd(), 'src/data/Bio100-10');
-    // const base = path.join(process.cwd(), 'src/data/Titanic');
+    // const base = path.join(process.cwd(), 'src/data/Bio100-10');
+    const base = path.join(process.cwd(), 'src/data/Titanic');
 
 
     const x = csvToArray(fs.readFileSync(path.join(base, 'x.csv'), 'utf-8'));

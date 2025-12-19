@@ -9,6 +9,11 @@ function featureKey(feature) {
   return Array.isArray(feature) ? feature.join("+") : feature;
 }
 
+function featureKeySorted(features) {
+  return [...features].sort().join("+");
+}
+
+
 function xHasFeature(feature) {
   const col = featureKey(feature);
   return store.x.length > 0 && col in store.x[0];
@@ -36,6 +41,24 @@ function maxFeatureImportance() {
       .map(d => d.feature_importance)
   );
 }
+
+function combinations(array, k) {
+  const results = [];
+  function helper(start, combo) {
+    if (combo.length === k) {
+      results.push([...combo]);
+      return;
+    }
+    for (let i = start; i < array.length; i++) {
+      combo.push(array[i]);
+      helper(i + 1, combo);
+      combo.pop();
+    }
+  }
+  helper(0, []);
+  return results;
+}
+
 
 
 
@@ -104,36 +127,65 @@ function add_feature_to_graph(feature, ghost = false) {
   ];
 }
 
-
-
-// function add_ghost(feature) {
-
-//   console.log("[add ghost] avec", feature);
-
-//   add_x_merge(feature);
-//   add_sv_merge(feature);
-
-//   cleanGhost();
-
-//   store.graph_data = [
-//     ...store.graph_data,
-//     {
-//       feature: featureKey(feature),
-//       feature_importance: compute_feature_importance(feature),
-//       direction: compute_direction(feature),
-//       deterministic_effect: compute_deterministic_effect(feature),
-//       isMerge: Array.isArray(feature) && feature.length > 1,
-//       isGhost: true,
-//       children: Array.isArray(feature) ? [...feature] : []
-//     }
-//   ];
-// }
-
 export function create_data(new_merges, ghost = false) {
   for (const feature of new_merges) {
     add_feature_to_graph(feature, ghost);
   }
 }
+
+export function findInterestingMerges(maxFeatures = 3) {
+  const features = store.allFeatures;
+
+  let bestImportance = null;
+  let bestDeterministic = null;
+  let bestDirection = null;
+
+  let maxImportance = 0;
+  let maxDeterministic = 0;
+  let maxDirection = 0;
+
+  for (let n = 2; n <= maxFeatures; n++) {
+    const combos = combinations(features, n);
+
+    for (const combo of combos) {
+      const comboKey = featureKeySorted(combo);
+
+      console.log("[testing combo]", combo);
+
+      const exists = store.merges.some(m => {
+        return m.length === combo.length && [...m].sort().join("+") === comboKey;
+      });
+      if (exists) continue;
+
+      add_x_merge(combo);
+      add_sv_merge(combo);
+
+      const fImportance = compute_feature_importance(combo);
+      const fDeterministic = compute_deterministic_effect(combo);
+      const fDirection = compute_direction(combo);
+
+      if (fImportance > maxImportance) {
+        maxImportance = fImportance;
+        bestImportance = combo;
+      }
+      if (fDeterministic > maxDeterministic) {
+        maxDeterministic = fDeterministic;
+        bestDeterministic = combo;
+      }
+      if (Math.abs(fDirection) > Math.abs(maxDirection)) {
+        maxDirection = fDirection;
+        bestDirection = combo;
+      }
+    }
+  }
+
+  return {
+    importance: bestImportance,
+    deterministic: bestDeterministic,
+    direction: bestDirection
+  };
+}
+
 
 export function deleteMerge(featureName) {
   store.graph_data = store.graph_data.filter(
