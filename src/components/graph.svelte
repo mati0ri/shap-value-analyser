@@ -511,6 +511,65 @@
                 cleanHoverCircle();
             });
 
+        function computeLabelLayout(data) {
+            const labelNodes = data
+                .filter((d) => !d.isGhost && !store.hideLabels)
+                .map((d) => {
+                    const px = x(d.deterministic_effect);
+                    const py = y(d.feature_importance);
+
+                    return {
+                        feature: d.feature,
+                        x: px,
+                        y: py + store.pointSize + 15, // position initiale
+                        fx: null,
+                        fy: null,
+                        anchorX: px,
+                        anchorY: py + store.pointSize + 15,
+                        width: d.feature.length, // approx largeur texte
+                        height: 14,
+                    };
+                });
+
+            const simulation = d3
+                .forceSimulation(labelNodes)
+                // attraction vers le point
+                .force("x", d3.forceX((d) => d.anchorX).strength(10))
+                .force("y", d3.forceY((d) => d.anchorY).strength(10))
+
+                // répulsion entre labels
+                .force("charge", d3.forceManyBody().strength(-15))
+
+                // collision label-label
+                .force(
+                    "collide",
+                    d3
+                        .forceCollide((d) => Math.max(d.width, d.height))
+                        .strength(0.7),
+                )
+
+                // bounds
+                .force("bounds", () => {
+                    labelNodes.forEach((d) => {
+                        d.x = Math.max(
+                            margin.left,
+                            Math.min(width - margin.right, d.x),
+                        );
+                        d.y = Math.max(
+                            margin.top,
+                            Math.min(height - margin.bottom, d.y),
+                        );
+                    });
+                })
+
+                .stop();
+
+            // résolution "offline"
+            for (let i = 0; i < 150; i++) simulation.tick();
+
+            return labelNodes;
+        }
+
         points.each(function (d) {
             const g = d3.select(this);
 
@@ -548,13 +607,28 @@
             }
 
             if (!store.hideLabels && !d.isGhost) {
-                g.append("text")
-                    .attr("y", store.pointSize + 15)
-                    .attr("text-anchor", "middle")
-                    .attr("font-size", "12px")
-                    .attr("fill", "#333")
-                    .attr("pointer-events", "none")
-                    .text(d.feature);
+                const labelLayout = computeLabelLayout(data);
+
+                points.each(function (d) {
+                    const g = d3.select(this);
+
+                    if (!store.hideLabels && !d.isGhost) {
+                        const label = labelLayout.find(
+                            (l) => l.feature === d.feature,
+                        );
+
+                        if (label) {
+                            g.append("text")
+                                .attr("x", label.x - x(d.deterministic_effect))
+                                .attr("y", label.y - y(d.feature_importance))
+                                .attr("text-anchor", "middle")
+                                .attr("font-size", "12px")
+                                .attr("fill", "#333")
+                                .attr("pointer-events", "none")
+                                .text(d.feature);
+                        }
+                    }
+                });
             }
 
             updateMergeSelectedLinks();
