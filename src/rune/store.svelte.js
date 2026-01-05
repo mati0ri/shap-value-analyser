@@ -52,6 +52,9 @@ class Store {
     colorSelectedStroke = "#d451fc";
     colorHoveredStroke = "#707070";
     colorClickedStroke = "#e04338";
+    minColor = "#007FFA";
+    midColor = "#FFFFFF";
+    maxColor = "#FF0047";
 
 
     async initialize(data) {

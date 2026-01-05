@@ -8,8 +8,8 @@
 
     let container;
 
-    let width = 400;
-    let height = 550;
+    let width = 550;
+    let height = 650;
     let padding = 100;
 
     function toggleHidden(feature) {

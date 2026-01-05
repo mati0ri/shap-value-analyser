@@ -14,8 +14,8 @@
         const data = store.filtered_graph_data;
 
         // a revoir pour rendre responsive
-        const width = 850;
-        const height = 700;
+        const width = 1100;
+        const height = 800;
         const margin = { top: 20, right: 110, bottom: 80, left: 90 };
 
         const wrapper = d3
@@ -34,6 +34,7 @@
             .attr("width", width)
             .attr("height", height);
 
+        // bulle avec le nom de la variable lors du hover
         const tooltip = wrapper
             .append("div")
             .style("position", "absolute")
@@ -43,54 +44,48 @@
             .style("border-radius", "4px")
             .style("pointer-events", "none")
             .style("font-size", "15px")
-            .style("font-weight", "regular")
             .style("display", "none")
-            .style("z-index", "10000")
+            .style("z-index", "100")
             .style("box-shadow", "0 2px 6px rgba(0,0,0,0.15)");
 
-        // guidelines
+        // guidelines (pointillés vers la axes au hover)
         const guideGroup = svg.append("g").attr("class", "guides");
 
         const guideLineX = guideGroup
             .append("line")
             .attr("stroke", "#666")
             .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "1 5")
-            .style("display", "none");
+            .attr("stroke-dasharray", "1 5");
 
         const guideLineY = guideGroup
             .append("line")
             .attr("stroke", "#666")
             .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "1 5")
-            .style("display", "none");
+            .attr("stroke-dasharray", "1 5");
 
         const guideLineDir = guideGroup
             .append("line")
             .attr("stroke", "#666")
             .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "1 5")
-            .style("display", "none");
+            .attr("stroke-dasharray", "1 5");
 
         const xLabel = guideGroup
             .append("text")
             .attr("font-size", 14)
-            .attr("font-weight", "bold")
-            .style("display", "none");
+            .attr("font-weight", "bold");
 
         const yLabel = guideGroup
             .append("text")
             .attr("font-size", 14)
-            .attr("font-weight", "bold")
-            .style("display", "none");
+            .attr("font-weight", "bold");
 
         const dirLabel = guideGroup
             .append("text")
             .attr("font-size", 14)
-            .attr("font-weight", "bold")
-            .style("display", "none");
+            .attr("font-weight", "bold");
 
         // axes
+        // les echelles
         const x = d3
             .scaleLinear()
             .range([margin.left, width - margin.right])
@@ -99,8 +94,9 @@
             .scaleLinear()
             .range([height - margin.bottom, margin.top])
             .domain([0, d3.max(data, (d) => d.feature_importance)])
-            .nice();
+            .nice(); // pour arrondir la val max
 
+        // dessiner les axes
         svg.append("g")
             .attr("class", "x-axis")
             .attr("transform", `translate(0,${height - margin.bottom})`)
@@ -111,7 +107,7 @@
             .attr("transform", `translate(${margin.left},0)`)
             .call(d3.axisLeft(y).ticks(7));
 
-        // titres
+        // titres des axes
         svg.append("text")
             .attr("x", (margin.left + width - margin.right) / 2)
             .attr("y", height - 6)
@@ -127,11 +123,11 @@
             .attr("font-size", 18)
             .text("Feature importance");
 
-        const minColor = "#007FFA";
-        const midColor = "#FFFFFF";
-        const maxColor = "#FF0047";
+        // legende pour la direction
+        const minColor = store.minColor;
+        const midColor = store.midColor;
+        const maxColor = store.maxColor;
 
-        // direction
         const legendW = 10;
         const legendH = height - margin.top - margin.bottom;
         const legendX = width - margin.right + 12;
@@ -145,18 +141,19 @@
             .attr("y1", "100%")
             .attr("x2", "0%")
             .attr("y2", "0%");
-        gradient
-            .append("stop")
-            .attr("offset", "0%")
-            .attr("stop-color", minColor);
-        gradient
-            .append("stop")
-            .attr("offset", "50%")
-            .attr("stop-color", midColor);
-        gradient
-            .append("stop")
-            .attr("offset", "100%")
-            .attr("stop-color", maxColor);
+
+        const stops = [
+            { offset: "0%", color: minColor },
+            { offset: "50%", color: midColor },
+            { offset: "100%", color: maxColor },
+        ];
+
+        stops.forEach((s) => {
+            gradient
+                .append("stop")
+                .attr("offset", s.offset)
+                .attr("stop-color", s.color);
+        });
 
         // rectangle gradiant
         svg.append("rect")
@@ -167,46 +164,41 @@
             .attr("height", legendH)
             .attr("fill", "url(#directionGrad)");
 
-        const dirScale = d3.scaleLinear().domain([-1, 1]).range([legendH, 0]);
+        // axe avec les ticks a droite
+        const dirScale = d3
+            .scaleLinear()
+            .domain([-1, 1])
+            .range([legendH - 1, 0]);
+
         svg.append("g")
             .attr("class", "dir-axis")
             .attr("transform", `translate(${legendX + legendW},${legendY})`)
             .call(d3.axisRight(dirScale).ticks(5))
-            .call((g) => g.select(".domain").remove());
+            .call((g) => g.select(".domain").remove()); // enlever la ligne de l'axe (je trouve ca plus joli)
 
         // titre
         svg.append("text")
             .attr("class", "direction-title")
-            .attr("x", legendX + legendW + 8)
-            .attr("y", legendY + legendH / 2 - 60)
-            .attr("text-anchor", "middle")
-            .attr("dominant-baseline", "middle")
             .attr(
                 "transform",
-                `rotate(90, ${legendX + legendW + 8}, ${legendY + legendH / 2})`,
+                `translate(${legendX + legendW + 70}, ${legendY + legendH / 2}) rotate(90)`,
             )
+            .attr("text-anchor", "middle")
             .attr("font-size", 18)
             .text("Direction");
 
-        const colorScale = d3
-            .scaleLinear()
-            .domain([-1, 0, 1])
-            .range([minColor, midColor, maxColor]);
+        // ########### LIENS GRIS MERGES SELECTIONNES ###########
 
-        // traits violets
-        const mergeLinesGroup = svg.append("g").attr("class", "merge-lines");
-
-        // traits selected
-        const mergeSelectedLinksGroup = svg
+        // traits gris qui s'affichent quand des merges sont sélectionnés (ou toutes les features d'un merge = la meme chose)
+        const selectedLinksGroup = svg
             .append("g")
             .attr("class", "merge-selected-links");
 
         function updateMergeSelectedLinks() {
-            mergeSelectedLinksGroup.selectAll("*").remove();
+            selectedLinksGroup.selectAll("*").remove();
 
             data.forEach((d) => {
                 if (d.isMerge) {
-                    // check si toutes les enfants sont sélectionnés
                     const allChildrenSelected = d.children.every((c) =>
                         store.selectedFeatures.includes(c),
                     );
@@ -215,7 +207,7 @@
                             const child = data.find(
                                 (x) => x.feature === childName,
                             );
-                            mergeSelectedLinksGroup
+                            selectedLinksGroup
                                 .append("line")
                                 .attr("x1", x(d.deterministic_effect))
                                 .attr("y1", y(d.feature_importance))
@@ -232,16 +224,20 @@
 
         // ########### FONCTIONS HOVER ###########
 
-        function hoverCircle(d) {
-            // tooltip
-            tooltip
-                .style("display", "block")
-                .html(`<div><b>${d.feature}</b></div>`);
+        // traits violets (hover sur un merge)
+        const hoverMergeLinksGroup = svg
+            .append("g")
+            .attr("class", "merge-lines");
 
+        function hoverCircle(d) {
             const cx = x(d.deterministic_effect);
             const cy = y(d.feature_importance);
 
-            tooltip.style("left", cx + 15 + "px").style("top", cy - 17 + "px");
+            tooltip
+                .style("display", "block")
+                .style("left", cx + 15 + "px")
+                .style("top", cy - 17 + "px")
+                .html(`<div><b>${d.feature}</b></div>`);
 
             // lignes guidelines
             guideLineY
@@ -265,6 +261,7 @@
                 .attr("y2", legendY + dirScale(d.direction))
                 .style("display", "block");
 
+            // labels guidelines
             xLabel
                 .attr("x", cx)
                 .attr("y", height - margin.bottom + 35)
@@ -287,7 +284,7 @@
 
             // ###### LOGIQUE LINKS ######
 
-            mergeLinesGroup.selectAll("*").remove();
+            hoverMergeLinksGroup.selectAll("*").remove();
 
             let allLinks = [];
 
@@ -338,7 +335,7 @@
             function removeDuplicateLinks(links) {
                 const seen = new Set();
                 return links.filter(({ parent, child }) => {
-                    const key = parent.feature + "→" + child.feature;
+                    const key = parent.feature + "->" + child.feature;
                     if (seen.has(key)) return false;
                     seen.add(key);
                     return true;
@@ -370,7 +367,7 @@
                 finalLinks.forEach(({ parent, child, level }) => {
                     const opacity = 0.6 * Math.pow(0.5, level);
 
-                    mergeLinesGroup
+                    hoverMergeLinksGroup
                         .append("line")
                         .attr("x1", x(parent.deterministic_effect))
                         .attr("y1", y(parent.feature_importance))
@@ -383,13 +380,6 @@
             }
 
             // highlight du point
-            const pointH = points.filter((x) => x.feature === d.feature);
-
-            pointH
-                .select("circle, rect")
-                // .attr("stroke", "black")
-                .attr("stroke-width", 5);
-
             points
                 .select("circle, rect")
                 .attr("stroke", (d) => {
@@ -432,7 +422,7 @@
             yLabel.style("display", "none");
             dirLabel.style("display", "none");
 
-            mergeLinesGroup.selectAll("*").remove();
+            hoverMergeLinksGroup.selectAll("*").remove();
 
             points
                 .select("circle, rect")
@@ -512,45 +502,77 @@
             });
 
         function computeLabelLayout(data) {
-            const labelNodes = data
+            // noeuds pour les labels (mobiles)
+            const labels = data
                 .filter((d) => !d.isGhost && !store.hideLabels)
                 .map((d) => {
                     const px = x(d.deterministic_effect);
                     const py = y(d.feature_importance);
-
                     return {
+                        type: "label",
                         feature: d.feature,
                         x: px,
-                        y: py + store.pointSize + 15, // position initiale
-                        fx: null,
-                        fy: null,
+                        y: py + store.pointSize + 15,
                         anchorX: px,
                         anchorY: py + store.pointSize + 15,
-                        width: d.feature.length, // approx largeur texte
+                        width: d.feature.length * 6, // Ajustez si besoin
                         height: 14,
                     };
                 });
 
+            // noeuds pour les points (fixes)
+            const pointsNodes = data
+                .filter((d) => !d.isGhost)
+                .map((d) => ({
+                    type: "point",
+                    // fx et fy figent la position
+                    fx: x(d.deterministic_effect),
+                    fy: y(d.feature_importance),
+                    radius: store.pointSize + 5, // On ajoute une petite marge de sécurité
+                }));
+
+            // On combine tout dans la simulation
+            const allNodes = [...labels, ...pointsNodes];
+
             const simulation = d3
-                .forceSimulation(labelNodes)
-                // attraction vers le point
-                .force("x", d3.forceX((d) => d.anchorX).strength(10))
-                .force("y", d3.forceY((d) => d.anchorY).strength(10))
+                .forceSimulation(allNodes)
 
-                // répulsion entre labels
-                .force("charge", d3.forceManyBody().strength(-15))
+                // attraction point d'ancrage
+                .force(
+                    "x",
+                    d3
+                        .forceX((d) => (d.type === "label" ? d.anchorX : d.fx))
+                        .strength(1.5),
+                )
+                .force(
+                    "y",
+                    d3
+                        .forceY((d) => (d.type === "label" ? d.anchorY : d.fy))
+                        .strength(1.5),
+                )
 
-                // collision label-label
+                // Répulsion
+                .force(
+                    "charge",
+                    d3
+                        .forceManyBody()
+                        .strength((d) => (d.type === "label" ? -10 : -20)),
+                )
+
+                // collision
+                // On définit un rayon de collision différent selon si c'est un point ou un label
                 .force(
                     "collide",
                     d3
-                        .forceCollide((d) => Math.max(d.width, d.height))
-                        .strength(0.7),
+                        .forceCollide((d) => {
+                            if (d.type === "point") return d.radius;
+                            return Math.max(d.width / 2, d.height); // Rayon approximatif pour le texte
+                        })
+                        .strength(1),
                 )
 
-                // bounds
                 .force("bounds", () => {
-                    labelNodes.forEach((d) => {
+                    labels.forEach((d) => {
                         d.x = Math.max(
                             margin.left,
                             Math.min(width - margin.right, d.x),
@@ -561,14 +583,19 @@
                         );
                     });
                 })
-
                 .stop();
 
-            // résolution "offline"
-            for (let i = 0; i < 150; i++) simulation.tick();
+            for (let i = 0; i < 200; i++) simulation.tick();
 
-            return labelNodes;
+            return allNodes.filter((d) => d.type === "label");
         }
+
+        const colorScale = d3
+            .scaleLinear()
+            .domain([-1, 0, 1])
+            .range([minColor, midColor, maxColor]);
+
+        const labelLayout = computeLabelLayout(data);
 
         points.each(function (d) {
             const g = d3.select(this);
@@ -606,32 +633,38 @@
                     .attr("stroke-opacity", 1);
             }
 
-            if (!store.hideLabels && !d.isGhost) {
-                const labelLayout = computeLabelLayout(data);
-
-                points.each(function (d) {
-                    const g = d3.select(this);
-
-                    if (!store.hideLabels && !d.isGhost) {
-                        const label = labelLayout.find(
-                            (l) => l.feature === d.feature,
-                        );
-
-                        if (label) {
-                            g.append("text")
-                                .attr("x", label.x - x(d.deterministic_effect))
-                                .attr("y", label.y - y(d.feature_importance))
-                                .attr("text-anchor", "middle")
-                                .attr("font-size", "12px")
-                                .attr("fill", "#333")
-                                .attr("pointer-events", "none")
-                                .text(d.feature);
-                        }
-                    }
-                });
-            }
 
             updateMergeSelectedLinks();
+        });
+
+        const labelGroup = svg.append("g").attr("class", "labels-group");
+
+        labelLayout.forEach((label) => {
+            const d = data.find((item) => item.feature === label.feature);
+            const g = labelGroup
+                .append("g")
+                .attr("transform", `translate(${label.x}, ${label.y})`);
+
+            g.append("text")
+                .attr("text-anchor", "middle")
+                .attr("font-size", "12px")
+                .text(label.feature);
+
+            // ligne entre le point et le label si trop éloigné
+            const dist = Math.sqrt(
+                Math.pow(label.x - x(d.deterministic_effect), 2) +
+                    Math.pow(label.y - y(d.feature_importance), 2),
+            );
+            if (dist > 40) {
+                labelGroup
+                    .append("line")
+                    .attr("x1", x(d.deterministic_effect))
+                    .attr("y1", y(d.feature_importance))
+                    .attr("x2", label.x)
+                    .attr("y2", label.y)
+                    .attr("stroke", "#ccc")
+                    .attr("stroke-dasharray", "2,2");
+            }
         });
 
         function externalHover(featureName) {
