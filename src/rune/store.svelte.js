@@ -9,6 +9,7 @@ class Store {
     hoveredMatrix = $state([]);
     hideLabels = $state(false);
     pointSize = $state(7);
+    downloadGraphSvg = () => { };
 
     isSelectedNew = $derived.by(() => {
         const selected = this.selectedFeatures;

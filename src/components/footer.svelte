@@ -121,6 +121,12 @@
             Export CSV
         </button>
     </div>
+    <div>
+        <button class="export" onclick={() => store.downloadGraphSvg()}>
+            <img src="/icones/export.svg" alt="export" class="icon" />
+            Export SVG
+        </button>
+    </div>
 </div>
 
 <style>
@@ -137,7 +143,7 @@
         background-color: #999999;
         color: white;
         border: none;
-        border-radius: 5px; 
+        border-radius: 5px;
         padding: 8px 12px;
         display: flex;
         align-items: center;

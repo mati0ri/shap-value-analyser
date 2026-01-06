@@ -737,10 +737,65 @@
         };
     }
 
+    function exportSVG() {
+        if (!graphDiv) return;
+        const svg = graphDiv.querySelector("svg");
+        if (!svg) return;
+
+        // Serialize SVG content
+        const serializer = new XMLSerializer();
+        let source = serializer.serializeToString(svg);
+
+        // Add white background for export only
+        // Insert a white rect as the first child of the SVG
+        const svgTagEnd = source.indexOf(">");
+        if (svgTagEnd !== -1) {
+            source =
+                source.slice(0, svgTagEnd + 1) +
+                '<rect width="100%" height="100%" fill="white"/>' +
+                source.slice(svgTagEnd + 1);
+        }
+
+        // Add namespaces
+        if (
+            !source.match(/^<svg[^>]+xmlns="http\:\/\/www\.w3\.org\/2000\/svg"/)
+        ) {
+            source = source.replace(
+                /^<svg/,
+                '<svg xmlns="http://www.w3.org/2000/svg"',
+            );
+        }
+        if (
+            !source.match(
+                /^<svg[^>]+xmlns:xlink="http\:\/\/www\.w3\.org\/1999\/xlink"/,
+            )
+        ) {
+            source = source.replace(
+                /^<svg/,
+                '<svg xmlns:xlink="http://www.w3.org/1999/xlink"',
+            );
+        }
+
+        // Add XML declaration
+        source = '<?xml version="1.0" standalone="no"?>\r\n' + source;
+
+        // Convert svg source to URI data scheme.
+        const url =
+            "data:image/svg+xml;charset=utf-8," + encodeURIComponent(source);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "graph.svg";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
     let graphApi = null;
 
     onMount(() => {
         graphApi = drawGraph();
+        store.downloadGraphSvg = exportSVG;
     });
 
     $effect(() => {
