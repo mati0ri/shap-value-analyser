@@ -374,15 +374,16 @@
                         .attr("x2", x(child.deterministic_effect))
                         .attr("y2", y(child.feature_importance))
                         .attr("stroke", store.colorSelectedStroke)
-                        .attr("stroke-width", 2)
+                        .attr("stroke-width", 1.5)
                         .attr("stroke-opacity", opacity);
                 });
             }
 
             // highlight du point
             points
-                .select("circle, rect")
+                .select("circle, path")
                 .attr("stroke", (d) => {
+                    if (d.isGhost) return store.colorStroke;
                     if (d.isMerge) {
                         // Merge : check si tous les enfants sont sélectionnés
                         const allChildrenSelected = d.children.every((c) =>
@@ -398,6 +399,7 @@
                     }
                 })
                 .attr("stroke-width", (d) => {
+                    if (d.isGhost) return 1.5;
                     if (d.isMerge) {
                         const allChildrenSelected = d.children.every((c) =>
                             store.selectedFeatures.includes(c),
@@ -425,8 +427,9 @@
             hoverMergeLinksGroup.selectAll("*").remove();
 
             points
-                .select("circle, rect")
+                .select("circle, rect, path")
                 .attr("stroke", (d) => {
+                    if (d.isGhost) return store.colorStroke;
                     if (d.isMerge) {
                         // Merge : check si tous les enfants sont sélectionnés
                         const allChildrenSelected = d.children.every((c) =>
@@ -442,6 +445,7 @@
                     }
                 })
                 .attr("stroke-width", (d) => {
+                    if (d.isGhost) return 1.5;
                     if (d.isMerge) {
                         const allChildrenSelected = d.children.every((c) =>
                             store.selectedFeatures.includes(c),
@@ -515,7 +519,7 @@
                         y: py + store.pointSize + 15,
                         anchorX: px,
                         anchorY: py + store.pointSize + 15,
-                        width: d.feature.length * 6, // moyenne 
+                        width: d.feature.length * 6, // moyenne
                         height: 14,
                     };
                 });
@@ -605,22 +609,27 @@
                         .attr("pointer-events", "none");
                 }
             } else if (d.isMerge) {
-                g.append("rect")
-                    .attr("x", -store.pointSize)
-                    .attr("y", -store.pointSize)
-                    .attr("width", store.pointSize * 2)
-                    .attr("height", store.pointSize * 2)
+                g.append("path")
+                    .attr(
+                        "d",
+                        d3
+                            .symbol()
+                            .type(d3.symbolTriangle)
+                            .size(Math.pow(store.pointSize * 2, 2)),
+                    )
                     .attr("fill", colorScale(d.direction))
                     .attr("stroke", store.colorStroke)
+                    .attr("stroke-width", 1.5)
                     .attr("stroke-opacity", 1);
             } else {
                 g.append("circle")
                     .attr("r", store.pointSize)
                     .attr("fill", colorScale(d.direction))
                     .attr("stroke", store.colorStroke)
+                    .attr("stroke-width", 1.5)
+
                     .attr("stroke-opacity", 1);
             }
-
 
             updateMergeSelectedLinks();
         });
