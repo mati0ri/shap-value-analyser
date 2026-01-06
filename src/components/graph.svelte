@@ -16,7 +16,7 @@
         // a revoir pour rendre responsive
         const width = 1100;
         const height = 800;
-        const margin = { top: 20, right: 110, bottom: 80, left: 90 };
+        const margin = { top: 20, right: 90, bottom: 50, left: 65 };
 
         const wrapper = d3
             .select(graphDiv)
@@ -47,42 +47,6 @@
             .style("display", "none")
             .style("z-index", "100")
             .style("box-shadow", "0 2px 6px rgba(0,0,0,0.15)");
-
-        // guidelines (pointillés vers la axes au hover)
-        const guideGroup = svg.append("g").attr("class", "guides");
-
-        const guideLineX = guideGroup
-            .append("line")
-            .attr("stroke", "#666")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "1 5");
-
-        const guideLineY = guideGroup
-            .append("line")
-            .attr("stroke", "#666")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "1 5");
-
-        const guideLineDir = guideGroup
-            .append("line")
-            .attr("stroke", "#666")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "1 5");
-
-        const xLabel = guideGroup
-            .append("text")
-            .attr("font-size", 14)
-            .attr("font-weight", "bold");
-
-        const yLabel = guideGroup
-            .append("text")
-            .attr("font-size", 14)
-            .attr("font-weight", "bold");
-
-        const dirLabel = guideGroup
-            .append("text")
-            .attr("font-size", 14)
-            .attr("font-weight", "bold");
 
         // axes
         // les echelles
@@ -181,11 +145,72 @@
             .attr("class", "direction-title")
             .attr(
                 "transform",
-                `translate(${legendX + legendW + 70}, ${legendY + legendH / 2}) rotate(90)`,
+                `translate(${legendX + legendW + 50}, ${legendY + legendH / 2}) rotate(90)`,
             )
             .attr("text-anchor", "middle")
             .attr("font-size", 18)
             .text("Direction");
+
+        // ########### GUIDES & LABELS (Last to be on top) ###########
+        const guideGroup = svg.append("g").attr("class", "guides");
+
+        const guideLineX = guideGroup
+            .append("line")
+            .attr("stroke", "#666")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "1 5");
+
+        const guideLineY = guideGroup
+            .append("line")
+            .attr("stroke", "#666")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "1 5");
+
+        const guideLineDir = guideGroup
+            .append("line")
+            .attr("stroke", "#666")
+            .attr("stroke-width", 1)
+            .attr("stroke-dasharray", "1 5");
+
+        // Backgrounds for labels
+        const xLabelBg = guideGroup
+            .append("rect")
+            .attr("fill", "white")
+            .attr("opacity", 0.8)
+            .attr("rx", 2)
+            .style("display", "none");
+
+        const yLabelBg = guideGroup
+            .append("rect")
+            .attr("fill", "white")
+            .attr("opacity", 0.8)
+            .attr("rx", 2)
+            .style("display", "none");
+
+        const dirLabelBg = guideGroup
+            .append("rect")
+            .attr("fill", "white")
+            .attr("opacity", 0.8)
+            .attr("rx", 2)
+            .style("display", "none");
+
+        const xLabel = guideGroup
+            .append("text")
+            .attr("font-size", 14)
+            .attr("font-weight", "bold")
+            .style("display", "none");
+
+        const yLabel = guideGroup
+            .append("text")
+            .attr("font-size", 14)
+            .attr("font-weight", "bold")
+            .style("display", "none");
+
+        const dirLabel = guideGroup
+            .append("text")
+            .attr("font-size", 14)
+            .attr("font-weight", "bold")
+            .style("display", "none");
 
         // ########### LIENS GRIS MERGES SELECTIONNES ###########
 
@@ -264,22 +289,46 @@
             // labels guidelines
             xLabel
                 .attr("x", cx)
-                .attr("y", height - margin.bottom + 35)
+                .attr("y", height - margin.bottom + 20)
                 .attr("text-anchor", "middle")
                 .text(d.deterministic_effect.toFixed(2))
                 .style("display", "block");
 
+            const xBBox = xLabel.node().getBBox();
+            xLabelBg
+                .attr("x", xBBox.x - 2)
+                .attr("y", xBBox.y - 1)
+                .attr("width", xBBox.width + 4)
+                .attr("height", xBBox.height + 2)
+                .style("display", "block");
+
             yLabel
-                .attr("x", margin.left - 30)
+                .attr("x", margin.left - 7)
                 .attr("y", cy + 4)
                 .attr("text-anchor", "end")
                 .text(d.feature_importance.toFixed(2))
                 .style("display", "block");
 
+            const yBBox = yLabel.node().getBBox();
+            yLabelBg
+                .attr("x", yBBox.x - 2)
+                .attr("y", yBBox.y - 1)
+                .attr("width", yBBox.width + 4)
+                .attr("height", yBBox.height + 2)
+                .style("display", "block");
+
             dirLabel
-                .attr("x", legendX + legendW + 32)
+                .attr("x", legendX + legendW + 8)
                 .attr("y", legendY + dirScale(d.direction))
                 .text(d.direction.toFixed(2))
+                .style("display", "block");
+
+            const dirBBox = dirLabel.node().getBBox();
+            dirLabelBg
+                .attr("x", dirBBox.x - 2)
+                .attr("y", dirBBox.y - 1)
+                .attr("width", dirBBox.width + 4)
+                .attr("height", dirBBox.height + 2)
                 .style("display", "block");
 
             // ###### LOGIQUE LINKS ######
@@ -424,6 +473,10 @@
             yLabel.style("display", "none");
             dirLabel.style("display", "none");
 
+            xLabelBg.style("display", "none");
+            yLabelBg.style("display", "none");
+            dirLabelBg.style("display", "none");
+
             hoverMergeLinksGroup.selectAll("*").remove();
 
             points
@@ -460,6 +513,10 @@
         }
 
         // ########### POINTS ###########
+
+        const labelLinesGroup = svg
+            .append("g")
+            .attr("class", "label-lines-group");
 
         const points = svg
             .append("g")
@@ -653,7 +710,7 @@
                     Math.pow(label.y - y(d.feature_importance), 2),
             );
             if (dist > 40) {
-                labelGroup
+                labelLinesGroup
                     .append("line")
                     .attr("x1", x(d.deterministic_effect))
                     .attr("y1", y(d.feature_importance))
