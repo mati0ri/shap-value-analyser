@@ -3,8 +3,6 @@
     import { cleanGhost, create_data } from "../functions/create_data";
 
     $inspect(store.filtered_graph_data);
-    $inspect(store.recomendedMerges);
-
 
     function handleMerge() {
         const selected = store.selectedFeatures;
@@ -42,17 +40,52 @@
         store.selectedFeatures = [];
         cleanGhost();
     }
+
+    function exportCSV() {
+        const data = store.filtered_graph_data;
+        if (!data || data.length === 0) return;
+
+        const headers = [
+            "feature",
+            "feature_importance",
+            "deterministic_effect",
+            "direction",
+        ];
+
+        const csvRows = [
+            headers.join(","),
+            ...data.map((row) =>
+                headers
+                    .map((fieldName) => JSON.stringify(row[fieldName] || ""))
+                    .join(","),
+            ),
+        ];
+
+        const csvContent = csvRows.join("\n");
+        const blob = new Blob([csvContent], {
+            type: "text/csv;charset=utf-8;",
+        });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", "graph_data_export.csv");
+        link.style.visibility = "hidden";
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 </script>
 
 <div class="footer">
     {#if store.selectedFeatures.length > 1}
         {#if store.isSelectedNew == true}
-        <div>
-            <button class="merge" onclick={handleMerge}>
-                <img src="/icones/merge.svg" alt="merge" class="icon" />
-                Merge {store.selectedFeatures.length} features
-            </button>
-        </div>
+            <div>
+                <button class="merge" onclick={handleMerge}>
+                    <img src="/icones/merge.svg" alt="merge" class="icon" />
+                    Merge {store.selectedFeatures.length} features
+                </button>
+            </div>
         {/if}
         <div>
             <button class="unselect" onclick={unselectAllFeatures}>
@@ -82,6 +115,12 @@
             bind:value={store.pointSize}
         />
     </div>
+    <div>
+        <button class="export" onclick={exportCSV}>
+            <img src="/icones/export.svg" alt="export" class="icon" />
+            Export CSV
+        </button>
+    </div>
 </div>
 
 <style>
@@ -95,10 +134,10 @@
     }
 
     button.merge {
-        background-color: #999999; /* gris */
+        background-color: #999999;
         color: white;
         border: none;
-        border-radius: 5px; /* pas d'arrondi */
+        border-radius: 5px; 
         padding: 8px 12px;
         display: flex;
         align-items: center;
@@ -140,5 +179,20 @@
         font-size: 14px;
     }
 
+    button.export {
+        background-color: white; /* gris */
+        color: #999999;
+        border: 2px solid #999999;
+        border-radius: 5px; /* pas d'arrondi */
+        padding: 8px 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        font-size: 14px;
+    }
 
+    button.export:hover {
+        background-color: #eeeeee;
+    }
 </style>

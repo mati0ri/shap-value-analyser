@@ -501,7 +501,7 @@
                 cleanHoverCircle();
             });
 
-        function computeLabelLayout(data) {
+        function computeForce(data) {
             // noeuds pour les labels (mobiles)
             const labels = data
                 .filter((d) => !d.isGhost && !store.hideLabels)
@@ -515,7 +515,7 @@
                         y: py + store.pointSize + 15,
                         anchorX: px,
                         anchorY: py + store.pointSize + 15,
-                        width: d.feature.length * 6, // Ajustez si besoin
+                        width: d.feature.length * 6, // moyenne 
                         height: 14,
                     };
                 });
@@ -528,39 +528,39 @@
                     // fx et fy figent la position
                     fx: x(d.deterministic_effect),
                     fy: y(d.feature_importance),
-                    radius: store.pointSize + 5, // On ajoute une petite marge de sécurité
+                    radius: store.pointSize + 5, // marge de sécurité
                 }));
 
-            // On combine tout dans la simulation
             const allNodes = [...labels, ...pointsNodes];
 
             const simulation = d3
                 .forceSimulation(allNodes)
 
-                // attraction point d'ancrage
+                // attraction au point d'ancrage
                 .force(
                     "x",
                     d3
                         .forceX((d) => (d.type === "label" ? d.anchorX : d.fx))
-                        .strength(1.5),
+                        .strength(1),
                 )
                 .force(
                     "y",
                     d3
                         .forceY((d) => (d.type === "label" ? d.anchorY : d.fy))
-                        .strength(1.5),
+                        .strength(1),
                 )
 
-                // Répulsion
+                // répulsion
                 .force(
                     "charge",
                     d3
                         .forceManyBody()
-                        .strength((d) => (d.type === "label" ? -10 : -20)),
+                        // .strength((d) => (d.type === "label" ? -10 : -20)),
+                        .strength(-1),
                 )
 
                 // collision
-                // On définit un rayon de collision différent selon si c'est un point ou un label
+                // on définit un rayon de collision différent selon si c'est un point ou un label
                 .force(
                     "collide",
                     d3
@@ -568,24 +568,12 @@
                             if (d.type === "point") return d.radius;
                             return Math.max(d.width / 2, d.height); // Rayon approximatif pour le texte
                         })
-                        .strength(1),
+                        .strength(2),
                 )
 
-                .force("bounds", () => {
-                    labels.forEach((d) => {
-                        d.x = Math.max(
-                            margin.left,
-                            Math.min(width - margin.right, d.x),
-                        );
-                        d.y = Math.max(
-                            margin.top,
-                            Math.min(height - margin.bottom, d.y),
-                        );
-                    });
-                })
                 .stop();
 
-            for (let i = 0; i < 200; i++) simulation.tick();
+            for (let i = 0; i < 400; i++) simulation.tick();
 
             return allNodes.filter((d) => d.type === "label");
         }
@@ -595,7 +583,7 @@
             .domain([-1, 0, 1])
             .range([minColor, midColor, maxColor]);
 
-        const labelLayout = computeLabelLayout(data);
+        const labelLayout = computeForce(data);
 
         points.each(function (d) {
             const g = d3.select(this);
