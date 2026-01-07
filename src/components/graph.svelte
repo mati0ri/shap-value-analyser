@@ -694,16 +694,67 @@
 
         const labelGroup = svg.append("g").attr("class", "labels-group");
 
+        const drag = d3
+            .drag()
+            .on("start", function (event, d) {
+                d3.select(this).raise().style("cursor", "grabbing");
+            })
+            .on("drag", function (event, d) {
+                d.x = event.x;
+                d.y = event.y;
+                d3.select(this).attr("transform", `translate(${d.x}, ${d.y})`);
+
+                // Update connecting line
+                const originalData = data.find(
+                    (item) => item.feature === d.feature,
+                );
+                const px = x(originalData.deterministic_effect);
+                const py = y(originalData.feature_importance);
+
+                const dist = Math.sqrt(
+                    Math.pow(d.x - px, 2) + Math.pow(d.y - py, 2),
+                );
+                const lineGroup = wrapper.select(".label-lines-group");
+                // Use filter to strictly match feature name to avoid selector issues with special chars
+                let line = lineGroup.selectAll("line").filter(function () {
+                    return d3.select(this).attr("data-feature") === d.feature;
+                });
+
+                if (dist > 40) {
+                    if (line.empty()) {
+                        line = lineGroup
+                            .append("line")
+                            .attr("data-feature", d.feature)
+                            .attr("stroke", "#ccc")
+                            .attr("stroke-dasharray", "2,2")
+                            .attr("pointer-events", "none");
+                    }
+                    line.attr("x1", px)
+                        .attr("y1", py)
+                        .attr("x2", d.x)
+                        .attr("y2", d.y);
+                } else {
+                    if (!line.empty()) line.remove();
+                }
+            })
+            .on("end", function (event, d) {
+                d3.select(this).style("cursor", "grab");
+            });
+
         labelLayout.forEach((label) => {
             const d = data.find((item) => item.feature === label.feature);
             const g = labelGroup
                 .append("g")
-                .attr("transform", `translate(${label.x}, ${label.y})`);
+                .datum(label) // Bind data so drag handler receives it
+                .attr("transform", `translate(${label.x}, ${label.y})`)
+                .style("cursor", "grab")
+                .call(drag);
 
             g.append("text")
                 .attr("text-anchor", "middle")
                 .attr("font-size", "12px")
-                .text(label.feature);
+                .text(label.feature)
+                .style("user-select", "none"); // Prevent text selection while dragging
 
             // ligne entre le point et le label si trop éloigné
             const dist = Math.sqrt(
@@ -713,6 +764,7 @@
             if (dist > 40) {
                 labelLinesGroup
                     .append("line")
+                    .attr("data-feature", label.feature) // Identifier for drag updates
                     .attr("x1", x(d.deterministic_effect))
                     .attr("y1", y(d.feature_importance))
                     .attr("x2", label.x)
