@@ -12,6 +12,22 @@
     let height = $state(650);
     let padding = 100;
     const rightMargin = 120; // Reserve space for buttons
+    let scrollTop = 0;
+    const ROW_HEIGHT = 40;
+
+    function handleScroll(event) {
+        event.preventDefault();
+        const maxScroll = Math.max(
+            0,
+            store.graph_data.filter((d) => !d.isGhost).length * ROW_HEIGHT -
+                (height - padding),
+        );
+        scrollTop = Math.max(0, Math.min(maxScroll, scrollTop + event.deltaY));
+        updateScroll();
+    }
+
+    // Use a variable to hold the update function for reactivity
+    let updateScroll = () => {};
 
     function toggleHidden(feature) {
         const hidden = store.hiddenFeatures;
@@ -41,8 +57,12 @@
         const colLabels = [...simpleFeatures];
 
         const n = rowLabels.length;
+        const totalContentHeight = n * ROW_HEIGHT;
 
         d3.select(container).selectAll("*").remove();
+
+        // Ajout du listener de scroll sur le container
+        d3.select(container).on("wheel", handleScroll);
 
         const svg = d3
             .select(container)
@@ -60,7 +80,11 @@
             .scaleBand()
             .domain(colLabels)
             .range([padding, matrixWidth]);
-        const y = d3.scaleBand().domain(rowLabels).range([padding, height]);
+        // Y scale is now purely calculation based, not range based on height
+        const y = d3
+            .scaleBand()
+            .domain(rowLabels)
+            .range([0, totalContentHeight]);
 
         // color scale
         const minColor = "#007FFA";
@@ -72,8 +96,24 @@
             .domain([-1, 0, 1])
             .range([minColor, midColor, maxColor]);
 
+        // DEFINE CLIPPING PATH for the scrolling body
+        // The clipping area starts at `padding` (below headers) and goes down to `height`
+        const clipHeight = Math.max(0, height - padding);
+        svg.append("defs")
+            .append("clipPath")
+            .attr("id", "matrix-scroll-clip")
+            .append("rect")
+            .attr("x", 0)
+            .attr("y", padding)
+            .attr("width", width)
+            .attr("height", clipHeight);
+
+        // ########## HEADERS (Fixed) ##########
+        const headerGroup = svg.append("g").attr("class", "matrix-headers");
+
         // Labels colonnes
-        svg.append("g")
+        headerGroup
+            .append("g")
             .attr("transform", `translate(0, ${padding - 8})`)
             .selectAll("text")
             .data(colLabels)
@@ -88,8 +128,18 @@
             })
             .text((d) => d);
 
+        // ########## SCROLLING BODY ##########
+        const scrollBody = svg
+            .append("g")
+            .attr("class", "matrix-body")
+            .attr("clip-path", "url(#matrix-scroll-clip)");
+
+        // The inner group that actually moves
+        const contentGroup = scrollBody.append("g");
+
         // Labels lignes
-        svg.append("g")
+        contentGroup
+            .append("g")
             .attr("transform", `translate(${padding - 8}, 0)`)
             .selectAll("text")
             .data(rowLabels)
@@ -98,17 +148,20 @@
             .attr("y", (d) => y(d) + y.bandwidth() / 2 + 4)
             .attr("text-anchor", "end")
             .attr("font-size", "15px")
-            .text((d) => (d.length > 6 ? d.slice(0, 6) + "..." : d));
+            .text((d) => (d.length > 7 ? d.slice(0, 7) + "..." : d));
+
+        const buttonSize = 30;
 
         // Boutons hide / show (pour simples + merges)
-        svg.append("g")
+        contentGroup
+            .append("g")
             .selectAll("g")
             .data(rowLabels)
             .join("g")
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${matrixWidth + 5}, ${y(d) + y.bandwidth() / 2 - 10})`,
+                    `translate(${matrixWidth + 5}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
             )
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -122,8 +175,8 @@
 
                 // fond vert
                 g.append("rect")
-                    .attr("width", 30)
-                    .attr("height", 30)
+                    .attr("width", buttonSize)
+                    .attr("height", buttonSize)
                     .attr("rx", 5)
                     .attr("ry", 5)
                     .attr("fill", isHidden ? "#cfcfcf" : store.colorStroke); // gris si hidden
@@ -143,14 +196,15 @@
             });
 
         // Boutons delete
-        svg.append("g")
+        contentGroup
+            .append("g")
             .selectAll("g")
             .data(mergeFeatures)
             .join("g")
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${matrixWidth + 40}, ${y(d) + y.bandwidth() / 2 - 10})`,
+                    `translate(${matrixWidth + 40}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
             ) // centré verticalement
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -160,8 +214,8 @@
                 const g = d3.select(this);
                 // fond rouge
                 g.append("rect")
-                    .attr("width", 30)
-                    .attr("height", 30)
+                    .attr("width", buttonSize)
+                    .attr("height", buttonSize)
                     .attr("rx", 5)
                     .attr("ry", 5)
                     .attr("fill", store.colorStroke);
@@ -176,14 +230,15 @@
             });
 
         // Boutons rename
-        svg.append("g")
+        contentGroup
+            .append("g")
             .selectAll("g")
             .data(mergeFeatures)
             .join("g")
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${matrixWidth + 75}, ${y(d) + y.bandwidth() / 2 - 10})`,
+                    `translate(${matrixWidth + 75}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
             )
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -193,8 +248,8 @@
                 const g = d3.select(this);
                 // fond bleu
                 g.append("rect")
-                    .attr("width", 30)
-                    .attr("height", 30)
+                    .attr("width", buttonSize)
+                    .attr("height", buttonSize)
                     .attr("rx", 5)
                     .attr("ry", 5)
                     .attr("fill", store.colorStroke);
@@ -209,7 +264,7 @@
             });
 
         // groupe pour les liens simples → merges
-        const simpleToMergeLinksGroup = svg
+        const simpleToMergeLinksGroup = contentGroup
             .append("g")
             .attr("class", "simple-to-merge-links");
 
@@ -251,9 +306,10 @@
         const separatorY =
             y(simpleFeatures[simpleFeatures.length - 1]) + y.bandwidth();
 
-        svg.append("line")
-            .attr("x1", padding - 70) // dépasse à gauche pour inclure les labels
-            .attr("x2", matrixWidth) // dépasse légèrement à droite
+        contentGroup
+            .append("line")
+            .attr("x1", padding - 150) // dépasse à gauche pour inclure les labels
+            .attr("x2", matrixWidth + 140) // dépasse légèrement à droite
             .attr("y1", separatorY)
             .attr("y2", separatorY)
             .attr("stroke", store.colorStroke)
@@ -284,23 +340,24 @@
         );
 
         // fond 1 ligne sur 2
-        const rowStriping = svg.append("g").attr("class", "row-striping");
+        const rowStriping = contentGroup
+            .append("g")
+            .attr("class", "row-striping");
 
         rowLabels.forEach((feature, index) => {
             if (index % 2 === 1) {
-                // impaire (0-indexé donc 1, 3, 5...)
                 rowStriping
                     .append("rect")
                     .attr("x", padding)
                     .attr("y", y(feature))
-                    .attr("width", width - padding)
+                    .attr("width", matrixWidth - padding)
                     .attr("height", y.bandwidth())
                     .attr("fill", "rgba(100,100,100,0.05)") // 10% gris
                     .attr("pointer-events", "none"); // ne bloque rien
             }
         });
 
-        const cellGroup = svg
+        const cellGroup = contentGroup
             .append("g")
             .selectAll("g")
             .data(cellsData)
@@ -322,7 +379,7 @@
             .append("circle")
             .attr("cx", x.bandwidth() / 2)
             .attr("cy", y.bandwidth() / 2)
-            .attr("r", Math.min(x.bandwidth(), y.bandwidth()) * 0.2)
+            .attr("r", Math.min(x.bandwidth()*0.3, y.bandwidth()*0.3))
             .attr("stroke", store.colorStroke)
             .attr("stroke-opacity", 1)
             .attr("stroke-width", (d) => {
@@ -340,7 +397,7 @@
             .attr("class", "gold-point")
             .attr("fill", (d) => {
                 const f = d.fullData;
-                if (!f) return "lightblue";
+                if (!f) return "green";
 
                 return colorScale(f.direction);
             })
@@ -415,6 +472,55 @@
             svg.selectAll(".hover-bg").attr("fill", "rgba(200,200,200,0)");
         }
 
+        function updateScrollLogic() {
+            // Apply transform to content group
+            contentGroup.attr(
+                "transform",
+                `translate(0, ${padding - scrollTop})`,
+            );
+
+            // Update Scrollbar Thumb
+            const visibleRatio = clipHeight / totalContentHeight;
+            if (visibleRatio >= 1) {
+                scrollTrack.style("display", "none");
+                scrollThumb.style("display", "none");
+            } else {
+                scrollTrack.style("display", "block");
+                scrollThumb.style("display", "block");
+                const thumbHeight = Math.max(20, clipHeight * visibleRatio);
+                const scrollRange = totalContentHeight - clipHeight;
+                const scrollRatio =
+                    scrollRange > 0 ? scrollTop / scrollRange : 0;
+                // thumb travel range
+                const trackEffectiveHeight = clipHeight - thumbHeight;
+                const thumbY = padding + scrollRatio * trackEffectiveHeight;
+
+                scrollThumb.attr("y", thumbY).attr("height", thumbHeight);
+            }
+        }
+        updateScroll = updateScrollLogic;
+
+        // Add Scrollbar
+        const scrollBarWidth = 6;
+        const scrollTrack = svg
+            .append("rect")
+            .attr("x", width - 10)
+            .attr("y", padding)
+            .attr("width", scrollBarWidth)
+            .attr("height", clipHeight)
+            .attr("fill", "#f0f0f0")
+            .attr("rx", 3);
+
+        const scrollThumb = svg
+            .append("rect")
+            .attr("x", width - 10)
+            .attr("width", scrollBarWidth)
+            .attr("fill", "#ccc")
+            .attr("rx", 3);
+
+        // Initial update
+        updateScroll();
+
         updateSimpleToMergeLinks();
 
         return {
@@ -444,9 +550,6 @@
     });
 </script>
 
-<!-- <div style="background-color: lightgrey;">
-    <div bind:this={container}></div>
-</div> -->
 <div
     bind:this={container}
     bind:clientWidth={width}
