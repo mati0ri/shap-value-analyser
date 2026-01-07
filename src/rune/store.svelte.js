@@ -57,6 +57,8 @@ class Store {
     minColor = "#007FFA";
     midColor = "#FFFFFF";
     maxColor = "#FF0047";
+    primary = "#9b00caff";
+    // secondaryColor = "#007FFA";
 
 
     async initialize(data) {

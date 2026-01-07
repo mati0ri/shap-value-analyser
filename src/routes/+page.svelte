@@ -7,18 +7,17 @@
     import { store } from "../rune/store.svelte";
     let { data } = $props();
 
-    store.initialize(data)
+    store.initialize(data);
 </script>
 
 <div class="container">
     <Header />
+    <Footer />
 
     <div class="middle">
         <Graph />
         <Matrix />
     </div>
-
-    <Footer />
 </div>
 
 <style>

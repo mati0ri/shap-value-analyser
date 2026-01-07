@@ -186,13 +186,13 @@
                     .attr(
                         "href",
                         isHidden
-                            ? "/icones/eye-closed.svg"
-                            : "/icones/eye-open.svg",
+                            ? "/icones/eye-closed-white.svg"
+                            : "/icones/eye-open-white.svg",
                     )
-                    .attr("width", 24)
-                    .attr("height", 24)
-                    .attr("x", 3)
-                    .attr("y", 4);
+                    .attr("width", 18)
+                    .attr("height", 18)
+                    .attr("x", 6)
+                    .attr("y", 6);
             });
 
         // Boutons delete
