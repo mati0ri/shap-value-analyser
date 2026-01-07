@@ -173,6 +173,110 @@
             .attr("stroke-width", 1)
             .attr("stroke-dasharray", "1 5");
 
+        // ########### LASSO LAYER ###########
+        // Must be on top of points but maybe below labels if we want labels draggable?
+        // Actually user said "happens only in the graph component".
+        // If we want to draw ON TOP of everything, append last.
+        // But if labels are draggable, we need to decide precedence.
+        // If lasso is ACTIVE, it should probably consume events, so on top.
+
+        const lassoGroup = svg.append("g").attr("class", "lasso-group");
+
+        const lassoPath = lassoGroup
+            .append("path")
+            .attr("fill", "#0078d4")
+            .attr("fill-opacity", 0.1)
+            .attr("stroke", "#0078d4")
+            .attr("stroke-width", 2)
+            .attr("stroke-dasharray", "5,5");
+
+        const lassoRect = lassoGroup
+            .append("rect")
+            .attr("width", width)
+            .attr("height", height)
+            .attr("fill", "transparent")
+            .style("cursor", "crosshair");
+
+        // Reactivity for Lasso State
+        $effect(() => {
+            if (store.isLassoActive) {
+                lassoRect.style("pointer-events", "all");
+            } else {
+                lassoRect.style("pointer-events", "none");
+            }
+        });
+
+        let lassoPolygon = [];
+
+        lassoRect.call(
+            d3
+                .drag()
+                .on("start", () => {
+                    lassoPolygon = [];
+                    lassoPath.attr("d", null);
+                })
+                .on("drag", (event) => {
+                    lassoPolygon.push([event.x, event.y]);
+                    const pathGen = d3.line();
+                    lassoPath.attr("d", pathGen(lassoPolygon));
+                })
+                .on("end", (event) => {
+                    if (lassoPolygon.length < 3) {
+                        lassoPolygon = [];
+                        lassoPath.attr("d", null);
+                        return;
+                    }
+
+                    // Close the path visually
+                    lassoPath.attr("d", d3.line()(lassoPolygon) + "Z");
+
+                    const currentSelected = [...store.selectedFeatures];
+                    let newSelection = [...currentSelected];
+                    let changed = false;
+
+                    // Find points inside
+                    // Data points consist of 'data' array
+                    data.forEach((d) => {
+                        if (d.isGhost) return;
+                        const px = x(d.deterministic_effect);
+                        const py = y(d.feature_importance);
+
+                        if (d3.polygonContains(lassoPolygon, [px, py])) {
+                            if (d.isMerge) {
+                                d.children.forEach((child) => {
+                                    if (!newSelection.includes(child)) {
+                                        newSelection.push(child);
+                                        changed = true;
+                                    }
+                                });
+                            } else {
+                                if (!newSelection.includes(d.feature)) {
+                                    newSelection.push(d.feature);
+                                    changed = true;
+                                }
+                            }
+                        }
+                    });
+
+                    // Reset visual state and lasso mode
+                    store.isLassoActive = false;
+                    cleanHoverCircle();
+
+                    if (changed) {
+                        // Update store and trigger data creation (simulating click behavior)
+                        store.selectedFeatures = newSelection;
+                        create_data([newSelection], true);
+                        updateMergeSelectedLinks();
+                    }
+
+                    // Clear lasso polygon
+                    lassoPolygon = [];
+                    lassoPath.attr("d", null);
+                }),
+        );
+
+        // Backgrounds for labels
+
         // Backgrounds for labels
         const xLabelBg = guideGroup
             .append("rect")
@@ -256,6 +360,7 @@
             .attr("class", "merge-lines");
 
         function hoverCircle(d) {
+            console.log("hoverCircle");
             const cx = x(d.deterministic_effect);
             const cy = y(d.feature_importance);
 
@@ -464,6 +569,7 @@
         }
 
         function cleanHoverCircle() {
+            console.log("cleanHoverCircle");
             tooltip.style("display", "none");
 
             guideLineX.style("display", "none");
@@ -667,6 +773,9 @@
                         .attr("pointer-events", "none");
                 }
             } else if (d.isMerge) {
+                const allChildrenSelected = d.children.every((c) =>
+                    store.selectedFeatures.includes(c),
+                );
                 g.append("path")
                     .attr(
                         "d",
@@ -676,15 +785,26 @@
                             .size(Math.pow(store.pointSize * 2, 2)),
                     )
                     .attr("fill", colorScale(d.direction))
-                    .attr("stroke", store.colorStroke)
-                    .attr("stroke-width", 1.5)
+                    .attr(
+                        "stroke",
+                        allChildrenSelected
+                            ? store.colorSelectedStroke
+                            : store.colorStroke,
+                    )
+                    .attr("stroke-width", allChildrenSelected ? 3 : 1.5)
                     .attr("stroke-opacity", 1);
             } else {
+                const isSelected = store.selectedFeatures.includes(d.feature);
                 g.append("circle")
                     .attr("r", store.pointSize)
                     .attr("fill", colorScale(d.direction))
-                    .attr("stroke", store.colorStroke)
-                    .attr("stroke-width", 1.5)
+                    .attr(
+                        "stroke",
+                        isSelected
+                            ? store.colorSelectedStroke
+                            : store.colorStroke,
+                    )
+                    .attr("stroke-width", isSelected ? 3 : 1.5)
 
                     .attr("stroke-opacity", 1);
             }

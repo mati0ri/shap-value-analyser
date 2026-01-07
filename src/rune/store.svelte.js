@@ -11,6 +11,7 @@ class Store {
     pointSize = $state(7);
     downloadGraphSvg = () => { };
     graphWidthPercentage = $state(50);
+    isLassoActive = $state(false);
 
     isSelectedNew = $derived.by(() => {
         const selected = this.selectedFeatures;

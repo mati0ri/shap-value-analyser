@@ -161,6 +161,15 @@
                 <img src="/icones/unselect.svg" alt="unselect" class="icon" />
                 <span>Unselect</span>
             </button>
+            <button
+                class="toolbar-btn"
+                onclick={() => (store.isLassoActive = !store.isLassoActive)}
+                title="Toggle Lasso Selection"
+                class:active={store.isLassoActive}
+            >
+                <img src="/icones/lasso.svg" alt="lasso" class="icon" />
+                <span>Lasso</span>
+            </button>
         </div>
     </div>
 
