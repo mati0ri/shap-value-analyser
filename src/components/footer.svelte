@@ -109,6 +109,17 @@
     let canUnselect = $derived(store.selectedFeatures.length > 0);
 
     let showShortcuts = $state(false);
+    let showAxesInfo = $state(false);
+
+    function toggleShortcuts() {
+        showShortcuts = !showShortcuts;
+        if (showShortcuts) showAxesInfo = false;
+    }
+
+    function toggleAxesInfo() {
+        showAxesInfo = !showAxesInfo;
+        if (showAxesInfo) showShortcuts = false;
+    }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
@@ -178,6 +189,18 @@
             </button>
 
             <div class="slider-container">
+                <label for="graphWidthSlider">Width</label>
+                <input
+                    id="graphWidthSlider"
+                    type="range"
+                    min="25"
+                    max="75"
+                    step="5"
+                    bind:value={store.graphWidthPercentage}
+                />
+            </div>
+
+            <div class="slider-container">
                 <label for="pointSizeSlider">Radius</label>
                 <input
                     id="pointSizeSlider"
@@ -234,7 +257,16 @@
         <div class="toolbar-group">
             <button
                 class="toolbar-btn"
-                onclick={() => (showShortcuts = !showShortcuts)}
+                onclick={toggleAxesInfo}
+                title="Axis Description"
+                class:active={showAxesInfo}
+            >
+                <img src="/icones/axis.svg" alt="axis" class="icon" />
+                <span>Axis</span>
+            </button>
+            <button
+                class="toolbar-btn"
+                onclick={toggleShortcuts}
                 title="Keyboard Shortcuts"
                 class:active={showShortcuts}
             >
@@ -243,8 +275,36 @@
             </button>
         </div>
 
+        {#if showAxesInfo}
+            <div class="dropdown-content axes-info">
+                <div class="info-item">
+                    <strong>Axis 1 – Feature importance:</strong> Measures how much
+                    a feature contributes on average to the model’s output. The concept
+                    is the same as the bar plot or any other feature importance score.
+                    The more the value increases, the more the feature has an influence
+                    on predictions.
+                </div>
+                <div class="info-item">
+                    <strong>Axis 2 – Deterministic effect:</strong> This metric quantifies
+                    the degree to which the value of the feature is connected to
+                    its effect on predictions. A high score means that the effect
+                    varies systematically with the value (strong, deterministic link),
+                    while a low score indicates a random or inconsistent influence.
+                </div>
+                <div class="info-item">
+                    <strong>Axis 3 – Direction:</strong> Captures whether a feature's
+                    value tends to increase or decrease predictions. Positive values
+                    indicate that a high feature value tends to increase the predicted
+                    value and a low feature value tends to decrease the prediction
+                    value; negative values indicates that a high feature value tends
+                    to decrease the predicted value and a low feature value tends
+                    to increase the prediction value.
+                </div>
+            </div>
+        {/if}
+
         {#if showShortcuts}
-            <div class="shortcuts-dropdown">
+            <div class="dropdown-content">
                 <div class="shortcut-item">
                     <span class="key">M</span>
                     <span class="desc">Merge features</span>
@@ -414,6 +474,10 @@
         border-radius: 2px;
     }
 
+    .slider-container:last-child {
+        border-right: none;
+    }
+
     .slider-container label {
         font-size: 13px;
         color: #323130;
@@ -428,8 +492,8 @@
         cursor: pointer;
     }
 
-    /* Shortcuts Dropdown */
-    .shortcuts-dropdown {
+    /* Dropdowns */
+    .dropdown-content {
         position: absolute;
         top: 100%;
         left: 0;
@@ -444,6 +508,26 @@
         display: flex;
         flex-direction: column;
         gap: 4px;
+        text-align: left;
+    }
+
+    .dropdown-content.axes-info {
+        min-width: 300px;
+        width: 400px; /* Wider for text */
+        right: 0; /* Align right if it gets too wide to left, but here relative to Help section which is far right, so maybe align right edge? */
+        left: auto;
+        right: 0;
+    }
+
+    .info-item {
+        font-size: 13px;
+        line-height: 1.4;
+        color: #323130;
+        margin-bottom: 8px;
+    }
+
+    .info-item:last-child {
+        margin-bottom: 0;
     }
 
     .shortcut-item {
