@@ -10,6 +10,7 @@ class Store {
     hideLabels = $state(false);
     pointSize = $state(7);
     downloadGraphSvg = () => { };
+    graphWidthPercentage = $state(50);
 
     isSelectedNew = $derived.by(() => {
         const selected = this.selectedFeatures;

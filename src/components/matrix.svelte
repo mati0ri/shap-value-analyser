@@ -8,9 +8,10 @@
 
     let container;
 
-    let width = 550;
-    let height = 650;
+    let width = $state(550);
+    let height = $state(650);
     let padding = 100;
+    const rightMargin = 120; // Reserve space for buttons
 
     function toggleHidden(feature) {
         const hidden = store.hiddenFeatures;
@@ -46,11 +47,19 @@
         const svg = d3
             .select(container)
             .append("svg")
-            .attr("width", width + 140)
-            .attr("height", height);
+            .attr("width", width)
+            .attr("height", height)
+            .style("position", "absolute")
+            .style("top", "0")
+            .style("left", "0");
+
+        const matrixWidth = width - rightMargin;
 
         // band scales
-        const x = d3.scaleBand().domain(colLabels).range([padding, width]);
+        const x = d3
+            .scaleBand()
+            .domain(colLabels)
+            .range([padding, matrixWidth]);
         const y = d3.scaleBand().domain(rowLabels).range([padding, height]);
 
         // color scale
@@ -99,7 +108,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${width + 5}, ${y(d) + y.bandwidth() / 2 - 10})`,
+                    `translate(${matrixWidth + 5}, ${y(d) + y.bandwidth() / 2 - 10})`,
             )
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -141,7 +150,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${width + 40}, ${y(d) + y.bandwidth() / 2 - 10})`,
+                    `translate(${matrixWidth + 40}, ${y(d) + y.bandwidth() / 2 - 10})`,
             ) // centré verticalement
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -174,7 +183,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${width + 75}, ${y(d) + y.bandwidth() / 2 - 10})`,
+                    `translate(${matrixWidth + 75}, ${y(d) + y.bandwidth() / 2 - 10})`,
             )
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -244,7 +253,7 @@
 
         svg.append("line")
             .attr("x1", padding - 70) // dépasse à gauche pour inclure les labels
-            .attr("x2", width) // dépasse légèrement à droite
+            .attr("x2", matrixWidth) // dépasse légèrement à droite
             .attr("y1", separatorY)
             .attr("y2", separatorY)
             .attr("stroke", store.colorStroke)
@@ -438,4 +447,10 @@
 <!-- <div style="background-color: lightgrey;">
     <div bind:this={container}></div>
 </div> -->
-<div bind:this={container}></div>
+<div
+    bind:this={container}
+    bind:clientWidth={width}
+    bind:clientHeight={height}
+    style="flex: {100 -
+        store.graphWidthPercentage}; height: 100%; min-width: 400px; min-height: 400px; overflow: hidden; position: relative;"
+></div>

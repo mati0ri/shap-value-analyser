@@ -6,23 +6,21 @@
 
     let graphDiv;
 
+    let width = $state(1100);
+    let height = $state(800);
+
     function drawGraph() {
         console.log("drawGraph");
+        if (!width || !height) return;
 
         // ########### SETUP ###########
 
         const data = store.filtered_graph_data;
 
-        // a revoir pour rendre responsive
-        const width = 1100;
-        const height = 800;
+        // responsive dimensions are bound to width/height
         const margin = { top: 20, right: 90, bottom: 50, left: 65 };
 
-        const wrapper = d3
-            .select(graphDiv)
-            .style("position", "relative")
-            .style("width", width + "px")
-            .style("height", height + "px");
+        const wrapper = d3.select(graphDiv);
         // .style("border", "1px solid #ccc");
 
         wrapper.selectAll("*").remove();
@@ -32,7 +30,10 @@
         const svg = wrapper
             .append("svg")
             .attr("width", width)
-            .attr("height", height);
+            .attr("height", height)
+            .style("position", "absolute")
+            .style("top", "0")
+            .style("left", "0");
 
         // bulle avec le nom de la variable lors du hover
         const tooltip = wrapper
@@ -813,4 +814,9 @@
     });
 </script>
 
-<div bind:this={graphDiv} class="graph"></div>
+<div
+    bind:this={graphDiv}
+    bind:clientWidth={width}
+    bind:clientHeight={height}
+    style="flex: {store.graphWidthPercentage}; height: 100%; min-width: 400px; min-height: 400px; overflow: hidden; position: relative;"
+></div>
