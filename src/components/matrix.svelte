@@ -11,7 +11,7 @@
     let width = $state(550);
     let height = $state(650);
     let padding = 100;
-    const rightMargin = 120; // Reserve space for buttons
+    const rightMargin = 125; // Reserve space for buttons
     let scrollTop = 0;
     const ROW_HEIGHT = 40;
 
@@ -161,7 +161,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${matrixWidth + 5}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
+                    `translate(${matrixWidth + 10}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
             )
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -179,15 +179,15 @@
                     .attr("height", buttonSize)
                     .attr("rx", 5)
                     .attr("ry", 5)
-                    .attr("fill", isHidden ? "#cfcfcf" : store.colorStroke); // gris si hidden
+                    .attr("fill", isHidden ? "#cfcfcf" : "var(--light-grey)"); // gris si hidden
 
                 // icône
                 g.append("image")
                     .attr(
                         "href",
                         isHidden
-                            ? "/icones/eye-closed-white.svg"
-                            : "/icones/eye-open-white.svg",
+                            ? "/icones/eye-closed.svg"
+                            : "/icones/eye-open.svg",
                     )
                     .attr("width", 18)
                     .attr("height", 18)
@@ -204,7 +204,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${matrixWidth + 40}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
+                    `translate(${matrixWidth + 45}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
             ) // centré verticalement
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -218,7 +218,7 @@
                     .attr("height", buttonSize)
                     .attr("rx", 5)
                     .attr("ry", 5)
-                    .attr("fill", store.colorStroke);
+                    .attr("fill", "var(--light-grey)");
 
                 // icône SVG
                 g.append("image")
@@ -238,7 +238,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${matrixWidth + 75}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
+                    `translate(${matrixWidth + 80}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
             )
             .attr("cursor", "pointer")
             .on("click", (event, feature) => {
@@ -252,7 +252,7 @@
                     .attr("height", buttonSize)
                     .attr("rx", 5)
                     .attr("ry", 5)
-                    .attr("fill", store.colorStroke);
+                    .attr("fill", "var(--light-grey)");
 
                 // icône SVG
                 g.append("image")
@@ -352,7 +352,7 @@
                     .attr("y", y(feature))
                     .attr("width", matrixWidth - padding)
                     .attr("height", y.bandwidth())
-                    .attr("fill", "rgba(100,100,100,0.05)") // 10% gris
+                    .attr("fill", "rgba(100,100,100,0.03)") // 10% gris
                     .attr("pointer-events", "none"); // ne bloque rien
             }
         });

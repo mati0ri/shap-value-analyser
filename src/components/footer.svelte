@@ -93,6 +93,8 @@
             store.downloadGraphSvg();
         } else if (key === "h") {
             store.hideLabels = !store.hideLabels;
+        } else if (key === "l") {
+            store.isLassoActive = !store.isLassoActive;
         }
     }
     let selectedUnique = $derived([...new Set(store.selectedFeatures)]);
@@ -164,7 +166,7 @@
             <button
                 class="toolbar-btn"
                 onclick={() => (store.isLassoActive = !store.isLassoActive)}
-                title="Toggle Lasso Selection"
+                title="Toggle Lasso Selection (l)"
                 class:active={store.isLassoActive}
             >
                 <img src="/icones/lasso.svg" alt="lasso" class="icon" />
@@ -246,7 +248,7 @@
                 title="Export SVG (s)"
             >
                 <img
-                    src="/icones/graph-icon.svg"
+                    src="/icones/graph.svg"
                     alt="export svg"
                     class="icon"
                 />
@@ -323,6 +325,10 @@
                     <span class="desc">Unselect all</span>
                 </div>
                 <div class="shortcut-item">
+                    <span class="key">L</span>
+                    <span class="desc">Toggle Lasso</span>
+                </div>
+                <div class="shortcut-item">
                     <span class="key">H</span>
                     <span class="desc">Toggle labels</span>
                 </div>
@@ -344,7 +350,7 @@
         width: 100%;
         height: auto;
         min-height: 56px; /* Increased slightly for labels */
-        background-color: #f3f2f1; /* Microsoft light grey */
+        background-color: var(--light-grey); /* Microsoft light grey */
         border-bottom: 1px solid #e1dfdd;
         display: flex;
         align-items: center; /* Vertically center the sections */
@@ -368,7 +374,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        gap: 2px;
+        gap: 4px;
     }
 
     .section-header {
@@ -404,7 +410,7 @@
         background-color: transparent; /* Flat style */
         border: 1px solid transparent; /* Reserve space for border */
         border-radius: 2px;
-        padding: 6px 10px;
+        padding: 5px 8px;
         display: flex;
         align-items: center;
         gap: 8px;
@@ -430,13 +436,16 @@
         pointer-events: none;
     }
 
-    /* Primary Action (Merge) - Optional: Make it stand out slightly or keep flat */
+    /* Primary Action (Merge) */
     .toolbar-btn.primary {
-        /* font-weight: 600; */
-        color: var(--primary-color, #0078d4);
+        background-color: var(--primary-color);
+        color: white;
+        border-color: transparent;
     }
     .toolbar-btn.primary:hover {
-        background-color: #eff6fc; /* Light blue tint for primary */
+        background-color: var(--primary-color);
+        opacity: 0.85;
+        color: white;
     }
 
     .icon {
@@ -497,7 +506,7 @@
         height: 4px;
         width: 80px;
         border-radius: 2px;
-        accent-color: var(--primary-color, #0078d4);
+        accent-color: var(--primary-color);
         cursor: pointer;
     }
 
@@ -554,7 +563,7 @@
         height: 24px;
         line-height: 24px;
         text-align: center;
-        background-color: #f3f2f1;
+        background-color: var(--light-grey);
         border: 1px solid #c8c6c4;
         border-radius: 4px;
         font-family: monospace;

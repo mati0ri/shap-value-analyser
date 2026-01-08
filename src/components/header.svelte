@@ -19,11 +19,8 @@
           </a>
         {/each}
       </div>
-      <h2
-        class="scroll-m-20 text-3xl font-semibold tracking-tight transition-colors first:mt-0"
-      >
-        SHAP value analyzer
-      </h2>
+      <!-- <h2>SHAP Explorer</h2> -->
+      <h2>SHAP Interpretability Dashboard</h2>
     </div>
   </div>
 </header>
@@ -39,12 +36,12 @@
     display: flex;
     align-items: center;
     color: white;
-    gap: 2.8rem;
+    gap: 2rem;
   }
 
   header {
     background-color: var(--primary-color);
-    padding: 0.2rem 1.4rem;
+    padding: 0rem 1.4rem;
   }
 
   .logos {
