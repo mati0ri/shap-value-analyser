@@ -302,7 +302,7 @@
                         allLinks = removeDuplicateLinks(allLinks);
                         const finalLinks = filterLinks(allLinks);
 
-                        finalLinks.forEach(({ parent, child, level }) => {
+                        finalLinks.forEach(({ parent, child }) => {
                             // Only draw if the child is also fully selected (if it's a merge) or selected (if it's a feature)
                             // Actually, if the parent is selected (all children selected),
                             // and we are drawing the substructure, we might want to see the whole structure
@@ -313,7 +313,6 @@
                             // So `linkAllSubsets` will find all subsets which are also implicitly selected.
                             // So we can just draw them.
 
-                            const opacity = 0.5 * Math.pow(0.5, level);
 
                             selectedLinksGroup
                                 .append("line")
@@ -321,9 +320,8 @@
                                 .attr("y1", y(parent.feature_importance))
                                 .attr("x2", x(child.deterministic_effect))
                                 .attr("y2", y(child.feature_importance))
-                                .attr("stroke", store.colorStroke + 60)
-                                .attr("stroke-width", 2)
-                                .attr("stroke-opacity", opacity);
+                                .attr("stroke", "#d4d4d4")
+                                .attr("stroke-width", 1.5)
                         });
                     }
                 }
@@ -429,8 +427,7 @@
 
                 const finalLinks = filterLinks(allLinks);
 
-                finalLinks.forEach(({ parent, child, level }) => {
-                    const opacity = 0.6 * Math.pow(0.5, level);
+                finalLinks.forEach(({ parent, child }) => {
 
                     hoverMergeLinksGroup
                         .append("line")
@@ -438,9 +435,8 @@
                         .attr("y1", y(parent.feature_importance))
                         .attr("x2", x(child.deterministic_effect))
                         .attr("y2", y(child.feature_importance))
-                        .attr("stroke", store.colorSelectedStroke)
+                        .attr("stroke", store.colorSelectedStroke + 80)
                         .attr("stroke-width", 1.5)
-                        .attr("stroke-opacity", opacity);
                 });
             }
 
