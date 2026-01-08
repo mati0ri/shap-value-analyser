@@ -1,6 +1,6 @@
 <script>
     import Header from "../components/header.svelte";
-    import Footer from "../components/footer.svelte";
+    import MenuBar from "../components/menuBar.svelte";
     import Graph from "../components/graph.svelte";
     import Matrix from "../components/matrix.svelte";
 
@@ -12,7 +12,7 @@
 
 <div class="container">
     <Header />
-    <Footer />
+    <MenuBar />
 
     <div class="middle">
         <Graph />
@@ -32,7 +32,8 @@
         flex: 1;
         display: flex;
         flex-direction: row;
-        padding: 30px;
-        gap: 40px;
+        padding: 40px;
+        gap: 10px;
+        background-color: var(--background-color);
     }
 </style>

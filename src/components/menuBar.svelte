@@ -112,21 +112,89 @@
 
     let showShortcuts = $state(false);
     let showAxesInfo = $state(false);
+    let showStudies = $state(false);
 
     function toggleShortcuts() {
         showShortcuts = !showShortcuts;
-        if (showShortcuts) showAxesInfo = false;
+        if (showShortcuts) {
+            showAxesInfo = false;
+            showStudies = false;
+        }
     }
 
     function toggleAxesInfo() {
         showAxesInfo = !showAxesInfo;
-        if (showAxesInfo) showShortcuts = false;
+        if (showAxesInfo) {
+            showShortcuts = false;
+            showStudies = false;
+        }
+    }
+
+    function toggleStudies() {
+        showStudies = !showStudies;
+        if (showStudies) {
+            showShortcuts = false;
+            showAxesInfo = false;
+        }
     }
 </script>
 
 <svelte:window onkeydown={handleKeydown} />
 
 <div class="toolbar">
+    <!-- Section 4: Case Study -->
+    <div class="toolbar-section" style="position: relative;">
+        <div class="section-header">
+            <img src="/icones/study.svg" alt="" class="section-icon" />
+            <span class="section-title">Case Study</span>
+        </div>
+        <div class="toolbar-group">
+            <button
+                class="toolbar-btn"
+                onclick={uploadStudy}
+                title="Not implemented yet"
+            >
+                <img src="/icones/upload.svg" alt="import" class="icon" />
+                <span>Upload</span>
+            </button>
+            <button
+                class="toolbar-btn"
+                onclick={toggleStudies}
+                title="Select Demo Study"
+                class:active={showStudies}
+            >
+                <img src="/icones/table.svg" alt="demos" class="icon" />
+                <span>Demos</span>
+            </button>
+        </div>
+
+        {#if showStudies}
+            <div class="dropdown-content">
+                <!-- Hardcoded list as backup, or ideally passed from page data if available via context/props -->
+                <!-- Since footer doesn't easily get page data without props, we'll hardcode the list matching server for now or use window.location -->
+                <button
+                    class="shortcut-item"
+                    style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
+                    onclick={() =>
+                        (window.location.href =
+                            "?study=Bio-allFeatures-withoutHumanFootprints")}
+                >
+                    <img src="/icones/file.svg" alt="demo" class="icon" />
+                    <span class="desc">Bio</span>
+                </button>
+                <button
+                    class="shortcut-item"
+                    style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
+                    onclick={() => (window.location.href = "?study=Titanic")}
+                >
+                    <img src="/icones/file.svg" alt="demo" class="icon" />
+                    <span class="desc">Titanic</span>
+                </button>
+            </div>
+        {/if}
+    </div>
+
+    <div class="separator"></div>
     <!-- Section 1: Selection -->
     <div class="toolbar-section">
         <div class="section-header">
@@ -247,11 +315,7 @@
                 onclick={() => store.downloadGraphSvg()}
                 title="Export SVG (s)"
             >
-                <img
-                    src="/icones/graph.svg"
-                    alt="export svg"
-                    class="icon"
-                />
+                <img src="/icones/graph.svg" alt="export svg" class="icon" />
                 <span>SVG</span>
             </button>
         </div>
@@ -259,7 +323,7 @@
 
     <div class="separator"></div>
 
-    <!-- Section 4: Help -->
+    <!-- Section 5: Help -->
     <div class="toolbar-section" style="position: relative;">
         <div class="section-header">
             <img src="/icones/help.svg" alt="" class="section-icon" />
@@ -351,7 +415,7 @@
         height: auto;
         min-height: 56px; /* Increased slightly for labels */
         background-color: var(--light-grey); /* Microsoft light grey */
-        border-bottom: 1px solid #e1dfdd;
+        border-bottom: 1px solid #d1d1d1;
         display: flex;
         align-items: center; /* Vertically center the sections */
         padding: 4px 16px;
@@ -366,7 +430,7 @@
             sans-serif;
         font-size: 14px;
         color: #201f1e;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
     }
 
     .toolbar-section {
@@ -409,7 +473,7 @@
     .toolbar-btn {
         background-color: transparent; /* Flat style */
         border: 1px solid transparent; /* Reserve space for border */
-        border-radius: 2px;
+        border-radius: 4px;
         padding: 5px 8px;
         display: flex;
         align-items: center;
@@ -422,12 +486,11 @@
     }
 
     .toolbar-btn:hover {
-        background-color: #edebe9; /* Hover grey */
-        color: #201f1e;
+        background-color: #d8d8d8; /* Hover grey */
     }
 
     .toolbar-btn:active {
-        background-color: #e1dfdd; /* Active grey */
+        background-color: #c6c6c6; /* Active grey */
     }
 
     .toolbar-btn:disabled {
@@ -444,7 +507,7 @@
     }
     .toolbar-btn.primary:hover {
         background-color: var(--primary-color);
-        opacity: 0.85;
+        opacity: 0.65;
         color: white;
     }
 
@@ -522,19 +585,39 @@
         padding: 8px;
         z-index: 1000;
         min-width: 180px;
-        margin-top: 4px;
+        margin-bottom: 4px;
         display: flex;
         flex-direction: column;
         gap: 4px;
         text-align: left;
+
+        /* Animation */
+        transform-origin: bottom left;
+        animation: slideIn 0.15s ease-out;
+    }
+
+    @keyframes slideIn {
+        from {
+            opacity: 0;
+            transform: translateY(5px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .dropdown-content button:hover,
+    .shortcut-item:hover {
+        background-color: #f3f2f1 !important; /* Microsoft light hover grey */
+        border-radius: 2px;
     }
 
     .dropdown-content.axes-info {
         min-width: 300px;
         width: 400px; /* Wider for text */
-        right: 0; /* Align right if it gets too wide to left, but here relative to Help section which is far right, so maybe align right edge? */
-        left: auto;
         right: 0;
+        left: auto;
     }
 
     .info-item {
@@ -554,7 +637,9 @@
         gap: 12px;
         font-size: 13px;
         color: #323130;
-        padding: 4px;
+        padding: 6px 8px; /* Increased padding slightly */
+        cursor: pointer;
+        transition: background-color 0.1s ease;
     }
 
     .key {

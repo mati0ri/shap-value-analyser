@@ -178,21 +178,21 @@
         // Backgrounds for labels
         const xLabelBg = guideGroup
             .append("rect")
-            .attr("fill", "white")
+            .attr("fill", "var(--background-color)")
             .attr("opacity", 0.8)
             .attr("rx", 2)
             .style("display", "none");
 
         const yLabelBg = guideGroup
             .append("rect")
-            .attr("fill", "white")
+            .attr("fill", "var(--background-color)")
             .attr("opacity", 0.8)
             .attr("rx", 2)
             .style("display", "none");
 
         const dirLabelBg = guideGroup
             .append("rect")
-            .attr("fill", "white")
+            .attr("fill", "var(--background-color)")
             .attr("opacity", 0.8)
             .attr("rx", 2)
             .style("display", "none");
@@ -222,6 +222,71 @@
             .append("g")
             .attr("class", "merge-selected-links");
 
+        // Helper functions for link calculation
+        function linkAllSubsets(rootMerge, level = 0, linksArray) {
+            const children = rootMerge.children;
+            const total = children.length;
+
+            for (let k = total - 1; k >= 1; k--) {
+                const candidates = data.filter((other) => {
+                    if (other.feature === rootMerge.feature) return false;
+
+                    if (k === 1 && !other.isMerge) {
+                        return children.includes(other.feature);
+                    }
+
+                    if (!other.isMerge) return false;
+                    if (other.children.length !== k) return false;
+
+                    return other.children.every((c) => children.includes(c));
+                });
+
+                candidates.forEach((sub) => {
+                    linksArray.push({
+                        parent: rootMerge,
+                        child: sub,
+                        level: level,
+                    });
+
+                    if (sub.isMerge) {
+                        linkAllSubsets(sub, level + 1, linksArray);
+                    }
+                });
+            }
+        }
+
+        function isParentOf(parent, child) {
+            if (!parent.isMerge) return false;
+            if (child.isMerge) {
+                return child.children.every((c) => parent.children.includes(c));
+            }
+            return parent.children.includes(child.feature);
+        }
+
+        function removeDuplicateLinks(links) {
+            const seen = new Set();
+            return links.filter(({ parent, child }) => {
+                const key = parent.feature + "->" + child.feature;
+                if (seen.has(key)) return false;
+                seen.add(key);
+                return true;
+            });
+        }
+
+        function filterLinks(links) {
+            return links.filter((linkA) => {
+                const A = linkA.parent;
+                const E = linkA.child;
+
+                const hasLowerLink = links.some((linkB) => {
+                    const P = linkB.parent;
+                    return P !== A && isParentOf(A, P) && linkB.child === E;
+                });
+
+                return !hasLowerLink;
+            });
+        }
+
         function updateMergeSelectedLinks() {
             selectedLinksGroup.selectAll("*").remove();
 
@@ -231,19 +296,34 @@
                         store.selectedFeatures.includes(c),
                     );
                     if (allChildrenSelected) {
-                        d.children.forEach((childName) => {
-                            const child = data.find(
-                                (x) => x.feature === childName,
-                            );
+                        // Use the same logic as hover
+                        let allLinks = [];
+                        linkAllSubsets(d, 0, allLinks);
+                        allLinks = removeDuplicateLinks(allLinks);
+                        const finalLinks = filterLinks(allLinks);
+
+                        finalLinks.forEach(({ parent, child, level }) => {
+                            // Only draw if the child is also fully selected (if it's a merge) or selected (if it's a feature)
+                            // Actually, if the parent is selected (all children selected),
+                            // and we are drawing the substructure, we might want to see the whole structure
+                            // OR we only want to see links between things that are explicitly selected?
+                            // "Aim is to suppress links when not needed" -> The purple logic suppresses transitive links.
+                            // The user says: "I see a ghost and grey lines... I would like these lines to be calculated the same way as the purple lines"
+                            // If `d` (the root merge) is selected, then by definition all its children are selected.
+                            // So `linkAllSubsets` will find all subsets which are also implicitly selected.
+                            // So we can just draw them.
+
+                            const opacity = 0.5 * Math.pow(0.5, level);
+
                             selectedLinksGroup
                                 .append("line")
-                                .attr("x1", x(d.deterministic_effect))
-                                .attr("y1", y(d.feature_importance))
+                                .attr("x1", x(parent.deterministic_effect))
+                                .attr("y1", y(parent.feature_importance))
                                 .attr("x2", x(child.deterministic_effect))
                                 .attr("y2", y(child.feature_importance))
                                 .attr("stroke", store.colorStroke + 60)
                                 .attr("stroke-width", 2)
-                                .attr("stroke-opacity", 0.5);
+                                .attr("stroke-opacity", opacity);
                         });
                     }
                 }
@@ -341,77 +421,9 @@
 
             let allLinks = [];
 
-            function linkAllSubsets(rootMerge, level = 0) {
-                const children = rootMerge.children;
-                const total = children.length;
-
-                for (let k = total - 1; k >= 1; k--) {
-                    const candidates = data.filter((other) => {
-                        if (other.feature === rootMerge.feature) return false;
-
-                        if (k === 1 && !other.isMerge) {
-                            return children.includes(other.feature);
-                        }
-
-                        if (!other.isMerge) return false;
-                        if (other.children.length !== k) return false;
-
-                        return other.children.every((c) =>
-                            children.includes(c),
-                        );
-                    });
-
-                    candidates.forEach((sub) => {
-                        allLinks.push({
-                            parent: rootMerge,
-                            child: sub,
-                            level: level,
-                        });
-
-                        if (sub.isMerge) {
-                            linkAllSubsets(sub, level + 1);
-                        }
-                    });
-                }
-            }
-
-            function isParentOf(parent, child) {
-                if (!parent.isMerge) return false;
-                if (child.isMerge) {
-                    return child.children.every((c) =>
-                        parent.children.includes(c),
-                    );
-                }
-                return parent.children.includes(child.feature);
-            }
-
-            function removeDuplicateLinks(links) {
-                const seen = new Set();
-                return links.filter(({ parent, child }) => {
-                    const key = parent.feature + "->" + child.feature;
-                    if (seen.has(key)) return false;
-                    seen.add(key);
-                    return true;
-                });
-            }
-
-            function filterLinks(links) {
-                return links.filter((linkA) => {
-                    const A = linkA.parent;
-                    const E = linkA.child;
-
-                    const hasLowerLink = links.some((linkB) => {
-                        const P = linkB.parent;
-                        return P !== A && isParentOf(A, P) && linkB.child === E;
-                    });
-
-                    return !hasLowerLink;
-                });
-            }
-
             if (d.isMerge) {
                 allLinks = [];
-                linkAllSubsets(d);
+                linkAllSubsets(d, 0, allLinks); // Pass allLinks array
 
                 allLinks = removeDuplicateLinks(allLinks);
 
@@ -581,7 +593,7 @@
                         y: py + store.pointSize + 15,
                         anchorX: px,
                         anchorY: py + store.pointSize + 15,
-                        width: d.feature.length * 6, // moyenne
+                        width: d.feature.length * 7, // moyenne
                         height: 14,
                     };
                 });
@@ -637,6 +649,26 @@
                         .strength(2),
                 )
 
+                .force("boundingBox", () => {
+                    allNodes.forEach((d) => {
+                        if (d.type === "label") {
+                            d.x = Math.max(
+                                margin.left + d.width / 2,
+                                Math.min(
+                                    width - margin.right - d.width / 2,
+                                    d.x,
+                                ),
+                            );
+                            d.y = Math.max(
+                                margin.top + d.height / 2,
+                                Math.min(
+                                    height - margin.bottom - d.height / 2,
+                                    d.y,
+                                ),
+                            );
+                        }
+                    });
+                })
                 .stop();
 
             for (let i = 0; i < 400; i++) simulation.tick();

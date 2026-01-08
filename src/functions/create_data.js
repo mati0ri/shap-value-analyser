@@ -215,6 +215,12 @@ export function renameMerge(oldName) {
     return;
   }
 
+  // Check if name exists
+  if (store.graph_data.some(d => d.feature === newName)) {
+    alert("Ce nom existe déjà.");
+    return;
+  }
+
   // --- Mettre à jour graph_data ---
   store.graph_data = store.graph_data.map((g) => {
     if (g.feature === oldName) {
@@ -250,4 +256,136 @@ export function renameMerge(oldName) {
   });
 
   console.log(`Merge "${oldName}" renommé en "${newName}" !`);
+}
+
+export function deleteFeature(featureName) {
+  // Check if feature is used in any merge
+  const dependentMerges = store.graph_data.filter(
+    d => d.isMerge && d.children.includes(featureName)
+  );
+
+  if (dependentMerges.length > 0) {
+    const confirmMessage = `${featureName} is part of at least 1 merge, would you like to proceed ? This will delete all the affected merges.`;
+    if (!confirm(confirmMessage)) {
+      return;
+    }
+
+    // Cascade delete dependent merges
+    dependentMerges.forEach(merge => {
+      deleteMerge(merge.feature);
+    });
+  }
+
+  // Delete the feature itself
+  deleteMerge(featureName);
+}
+
+export function renameFeature(oldName) {
+  const newName = prompt(`Entrez un nouveau nom pour la feature "${oldName}":`);
+
+  if (!newName || newName.trim() === "") {
+    console.log("Nom invalide, opération annulée.");
+    return;
+  }
+
+  // Check if name exists
+  if (store.graph_data.some(d => d.feature === newName)) {
+    alert("Ce nom existe déjà.");
+    return;
+  }
+
+  // 1. Update store.allFeatures
+  const idx = store.allFeatures.indexOf(oldName);
+  if (idx !== -1) {
+    store.allFeatures[idx] = newName;
+  }
+
+  // 2. Update x and sv keys for the base feature
+  // x
+  for (let i = 0; i < store.x.length; i++) {
+    if (store.x[i][oldName] !== undefined) {
+      store.x[i][newName] = store.x[i][oldName];
+      delete store.x[i][oldName];
+    }
+  }
+  // sv
+  const oldSvCol = "shap_" + oldName;
+  const newSvCol = "shap_" + newName;
+  for (let i = 0; i < store.sv.length; i++) {
+    if (store.sv[i][oldSvCol] !== undefined) {
+      store.sv[i][newSvCol] = store.sv[i][oldSvCol];
+      delete store.sv[i][oldSvCol];
+    }
+  }
+
+  // 3. Update graph_data for the feature itself
+  store.graph_data = store.graph_data.map(g => {
+    if (g.feature === oldName) {
+      return { ...g, feature: newName };
+    }
+    return g;
+  });
+
+  // 4. Update Merges
+  // Update the merges array definition
+  store.merges = store.merges.map(mergeArray =>
+    mergeArray.map(f => (f === oldName ? newName : f))
+  );
+
+  // Update dependent merges in graph_data
+  store.graph_data = store.graph_data.map(g => {
+    if (g.isMerge && g.children.includes(oldName)) {
+      // Update children list
+      const newChildren = g.children.map(c => (c === oldName ? newName : c));
+
+      // Decide if we rename the merge itself
+      // User rule: "If a merge contains '+feature-name+', it means that the merge was not renamed and that it's safe to change its name too."
+      let newMergeName = g.feature;
+
+      // Check if old name is part of the merge name string
+      // e.g. "Age+Income" contains "Age".
+      // We look for exact word boundaries or the separator '+' usually used.
+      // But user said "contains '+feature-name+'" which implies we check if the string is just composed of joined features?
+      // Simpler heuristic based on instructions:
+      if (g.feature.includes(oldName)) {
+        // Replace the old name with the new name in the string
+        // We must be careful not to replace substrings (e.g. "Age" in "Page") if that were possible.
+        // Assuming feature names are unique segments.
+        newMergeName = g.feature.split('+').map(part => part === oldName ? newName : part).join('+');
+      }
+
+      // If name changed, we must update x and sv for the merge too
+      if (newMergeName !== g.feature) {
+        // x
+        for (let i = 0; i < store.x.length; i++) {
+          if (store.x[i][g.feature] !== undefined) {
+            store.x[i][newMergeName] = store.x[i][g.feature];
+            delete store.x[i][g.feature];
+          }
+        }
+        // sv
+        const oldMergeSv = "shap_" + g.feature;
+        const newMergeSv = "shap_" + newMergeName;
+        for (let i = 0; i < store.sv.length; i++) {
+          if (store.sv[i][oldMergeSv] !== undefined) {
+            store.sv[i][newMergeSv] = store.sv[i][oldMergeSv];
+            delete store.sv[i][oldMergeSv];
+          }
+        }
+      }
+
+      return {
+        ...g,
+        feature: newMergeName,
+        children: newChildren
+      };
+    }
+    return g;
+  });
+
+  // Update selected features if needed
+  if (store.selectedFeatures.includes(oldName)) {
+    const sIdx = store.selectedFeatures.indexOf(oldName);
+    store.selectedFeatures[sIdx] = newName;
+  }
 }
