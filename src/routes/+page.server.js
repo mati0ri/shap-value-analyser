@@ -20,8 +20,8 @@ export function load({ url }) {
 
     const validStudies = [
         "Bio-allFeatures-withoutHumanFootprints",
-        // "Bio10",
-        // "Bio100-10",
+        "Bio10",
+        "Bio100-10",
         "Titanic"
     ];
 

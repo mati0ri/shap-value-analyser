@@ -25,7 +25,6 @@ function svHasFeature(feature) {
 }
 
 export function cleanGhost() {
-  console.log("[clean ghost]");
   store.graph_data = store.graph_data.filter(d => !d.isGhost);
 }
 
@@ -95,7 +94,6 @@ function add_sv_merge(feature) {
 
 
 function add_feature_to_graph(feature, ghost = false) {
-  console.log("[add feature to graph] avec", feature);
 
   const key = featureKey(feature);
 
@@ -149,8 +147,6 @@ export function findInterestingMerges(maxFeatures = 3) {
 
     for (const combo of combos) {
       const comboKey = featureKeySorted(combo);
-
-      console.log("[testing combo]", combo);
 
       const exists = store.merges.some(m => {
         return m.length === combo.length && [...m].sort().join("+") === comboKey;
@@ -211,7 +207,6 @@ export function renameMerge(oldName) {
   const newName = prompt(`Entrez un nouveau nom pour le merge "${oldName}":`);
 
   if (!newName || newName.trim() === "") {
-    console.log("Nom invalide, opération annulée.");
     return;
   }
 
@@ -255,7 +250,6 @@ export function renameMerge(oldName) {
     return mergeArray;
   });
 
-  console.log(`Merge "${oldName}" renommé en "${newName}" !`);
 }
 
 export function deleteFeature(featureName) {
@@ -284,7 +278,6 @@ export function renameFeature(oldName) {
   const newName = prompt(`Entrez un nouveau nom pour la feature "${oldName}":`);
 
   if (!newName || newName.trim() === "") {
-    console.log("Nom invalide, opération annulée.");
     return;
   }
 

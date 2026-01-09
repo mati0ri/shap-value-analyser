@@ -10,7 +10,6 @@
     let height = $state(800);
 
     function drawGraph() {
-        console.log("drawGraph");
         if (!width || !height) return;
 
         // ########### SETUP ###########
@@ -313,7 +312,6 @@
                             // So `linkAllSubsets` will find all subsets which are also implicitly selected.
                             // So we can just draw them.
 
-
                             selectedLinksGroup
                                 .append("line")
                                 .attr("x1", x(parent.deterministic_effect))
@@ -321,7 +319,7 @@
                                 .attr("x2", x(child.deterministic_effect))
                                 .attr("y2", y(child.feature_importance))
                                 .attr("stroke", "#d4d4d4")
-                                .attr("stroke-width", 1.5)
+                                .attr("stroke-width", 1.5);
                         });
                     }
                 }
@@ -336,7 +334,6 @@
             .attr("class", "merge-lines");
 
         function hoverCircle(d) {
-            console.log("hoverCircle");
             const cx = x(d.deterministic_effect);
             const cy = y(d.feature_importance);
 
@@ -428,7 +425,6 @@
                 const finalLinks = filterLinks(allLinks);
 
                 finalLinks.forEach(({ parent, child }) => {
-
                     hoverMergeLinksGroup
                         .append("line")
                         .attr("x1", x(parent.deterministic_effect))
@@ -436,7 +432,7 @@
                         .attr("x2", x(child.deterministic_effect))
                         .attr("y2", y(child.feature_importance))
                         .attr("stroke", store.colorSelectedStroke + 80)
-                        .attr("stroke-width", 1.5)
+                        .attr("stroke-width", 1.5);
                 });
             }
 
@@ -475,7 +471,6 @@
         }
 
         function cleanHoverCircle() {
-            console.log("cleanHoverCircle");
             tooltip.style("display", "none");
 
             guideLineX.style("display", "none");
@@ -575,101 +570,179 @@
                 cleanHoverCircle();
             });
 
-        function computeForce(data) {
-            // noeuds pour les labels (mobiles)
-            const labels = data
-                .filter((d) => !d.isGhost && !store.hideLabels)
-                .map((d) => {
-                    const px = x(d.deterministic_effect);
-                    const py = y(d.feature_importance);
-                    return {
-                        type: "label",
-                        feature: d.feature,
-                        x: px,
-                        y: py + store.pointSize + 15,
-                        anchorX: px,
-                        anchorY: py + store.pointSize + 15,
-                        width: d.feature.length * 7, // moyenne
-                        height: 14,
-                    };
-                });
+        function computeGreedyLayout(data) {
+            const padding = 0;
+            const obstacles = [];
 
-            // noeuds pour les points (fixes)
-            const pointsNodes = data
-                .filter((d) => !d.isGhost)
-                .map((d) => ({
+            // points
+            data.forEach((d) => {
+                if (d.isGhost) return;
+                const px = x(d.deterministic_effect);
+                const py = y(d.feature_importance);
+                const r = store.pointSize + 5;
+
+                obstacles.push({
+                    x: px,
+                    y: py,
+                    halfW: r + padding,
+                    halfH: r + padding,
                     type: "point",
-                    // fx et fy figent la position
-                    fx: x(d.deterministic_effect),
-                    fy: y(d.feature_importance),
-                    radius: store.pointSize + 5, // marge de sécurité
+                });
+            });
+
+            // labels
+            let labels = data
+                .filter((d) => !d.isGhost && !store.hideLabels)
+                .map((d) => ({
+                    feature: d.feature,
+                    width: d.feature.length * 7,
+                    height: 14,
+                    anchorX: x(d.deterministic_effect),
+                    anchorY: y(d.feature_importance),
+                    x: 0,
+                    y: 0,
                 }));
 
-            const allNodes = [...labels, ...pointsNodes];
+            // Tri : on place les labels de bas en haut, de gauche en droite
+            labels.sort((a, b) => {
+                if (Math.abs(a.anchorY - b.anchorY) > 0.001) {
+                    return b.anchorY - a.anchorY;
+                }
+                return a.anchorX - b.anchorX;
+            });
 
-            const simulation = d3
-                .forceSimulation(allNodes)
+            // directions (anti-horaire depuis le sud)
+            const numDirs = 128;
+            const startAngle = Math.PI / 2;
+            const directions = [];
 
-                // attraction au point d'ancrage
-                .force(
-                    "x",
-                    d3
-                        .forceX((d) => (d.type === "label" ? d.anchorX : d.fx))
-                        .strength(1),
-                )
-                .force(
-                    "y",
-                    d3
-                        .forceY((d) => (d.type === "label" ? d.anchorY : d.fy))
-                        .strength(1),
-                )
+            for (let i = 0; i < numDirs; i++) {
+                const angle = startAngle - (i * 2 * Math.PI) / numDirs;
+                let dx = Math.cos(angle);
+                let dy = Math.sin(angle);
 
-                // répulsion
-                .force(
-                    "charge",
-                    d3
-                        .forceManyBody()
-                        // .strength((d) => (d.type === "label" ? -10 : -20)),
-                        .strength(-1),
-                )
+                if (Math.abs(dx) < 1e-10) dx = 0;
+                if (Math.abs(dy) < 1e-10) dy = 0;
 
-                // collision
-                // on définit un rayon de collision différent selon si c'est un point ou un label
-                .force(
-                    "collide",
-                    d3
-                        .forceCollide((d) => {
-                            if (d.type === "point") return d.radius;
-                            return Math.max(d.width / 2, d.height); // Rayon approximatif pour le texte
-                        })
-                        .strength(2),
-                )
+                directions.push({ dx, dy, index: i });
+            }
 
-                .force("boundingBox", () => {
-                    allNodes.forEach((d) => {
-                        if (d.type === "label") {
-                            d.x = Math.max(
-                                margin.left + d.width / 2,
-                                Math.min(
-                                    width - margin.right - d.width / 2,
-                                    d.x,
-                                ),
-                            );
-                            d.y = Math.max(
-                                margin.top + d.height / 2,
-                                Math.min(
-                                    height - margin.bottom - d.height / 2,
-                                    d.y,
-                                ),
-                            );
+            // placement
+            const maxRadius = 250;
+            const step = 1;
+            const maxValidRings = store.allFeatures.length / 3;
+            const kNN = Math.round(store.allFeatures.length / 4);
+
+            labels.forEach((lbl) => {
+                const halfW = lbl.width / 2;
+                const halfH = lbl.height / 2;
+                const pointR = store.pointSize;
+                const startR = pointR + halfH + padding;
+
+                const ringCandidates = [];
+
+                for (let r = startR; r < maxRadius; r += step) {
+                    const candidates = [];
+
+                    for (const dir of directions) {
+                        const cx = lbl.anchorX + dir.dx * r;
+                        const cy = lbl.anchorY + dir.dy * r;
+
+                        // Limites viewport
+                        if (
+                            cx - halfW < margin.left ||
+                            cx + halfW > width - margin.right ||
+                            cy - halfH < margin.top ||
+                            cy + halfH > height - margin.bottom
+                        ) {
+                            continue;
                         }
-                    });
-                })
-                .stop();
 
-            for (let i = 0; i < 400; i++) simulation.tick();
+                        // Collision check
+                        let collision = false;
+                        const distances = [];
 
-            return allNodes.filter((d) => d.type === "label");
+                        for (const obs of obstacles) {
+                            const distW = halfW + obs.halfW;
+                            const distH = halfH + obs.halfH;
+
+                            if (
+                                Math.abs(cx - obs.x) < distW &&
+                                Math.abs(cy - obs.y) < distH
+                            ) {
+                                collision = true;
+                                break;
+                            }
+
+                            const dx = cx - obs.x;
+                            const dy = cy - obs.y;
+                            distances.push(Math.sqrt(dx * dx + dy * dy));
+                        }
+
+                        if (collision) continue;
+
+                        // k-NN clearance
+                        distances.sort((a, b) => a - b);
+                        const k = Math.min(kNN, distances.length);
+                        let sum = 0;
+                        for (let i = 0; i < k; i++) sum += distances[i];
+                        const clearance = sum / k;
+
+                        candidates.push({
+                            x: cx,
+                            y: cy,
+                            r,
+                            clearance,
+                            dirIndex: dir.index,
+                        });
+                    }
+
+                    if (candidates.length > 0) {
+                        ringCandidates.push(...candidates);
+                        if (ringCandidates.length >= maxValidRings * numDirs) {
+                            break;
+                        }
+                    }
+                }
+
+                // Choix global parmi les premiers rayons valides
+                let best = null;
+                let bestScore = -Infinity;
+
+                for (const c of ringCandidates) {
+                    // Cap du clearance pour éviter que des voisins très lointains ne repoussent le label
+                    // Si on a déjà 100px de libre, pas la peine d'aller plus loin chercher 200px
+                    const cappedClearance = Math.min(c.clearance, 100);
+                    const score = cappedClearance - 0.6 * c.r;
+
+                    if (score > bestScore) {
+                        bestScore = score;
+                        best = c;
+                    }
+                }
+
+                // Fallback (rare)
+                if (!best) {
+                    best = {
+                        x: lbl.anchorX,
+                        y: lbl.anchorY + startR + 10,
+                    };
+                }
+
+                lbl.x = best.x;
+                lbl.y = best.y;
+
+                // Ajouter le label comme obstacle
+                obstacles.push({
+                    x: lbl.x,
+                    y: lbl.y,
+                    halfW: halfW + padding,
+                    halfH: halfH + padding,
+                    type: "label",
+                });
+            });
+
+            return labels;
         }
 
         const colorScale = d3
@@ -677,7 +750,7 @@
             .domain([-1, 0, 1])
             .range([minColor, midColor, maxColor]);
 
-        const labelLayout = computeForce(data);
+        const labelLayout = computeGreedyLayout(data);
 
         points.each(function (d) {
             const g = d3.select(this);

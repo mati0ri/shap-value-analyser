@@ -2,7 +2,7 @@
     import { store } from "../rune/store.svelte";
     import { cleanGhost, create_data } from "../functions/create_data";
 
-    $inspect(store.filtered_graph_data);
+    // $inspect(store.filtered_graph_data);
 
     function handleMerge() {
         const selected = store.selectedFeatures;
@@ -190,6 +190,22 @@
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Titanic</span>
                 </button>
+                <button
+                    class="shortcut-item"
+                    style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
+                    onclick={() => (window.location.href = "?study=Bio10")}
+                >
+                    <img src="/icones/file.svg" alt="demo" class="icon" />
+                    <span class="desc">Bio10</span>
+                </button>
+                <button
+                    class="shortcut-item"
+                    style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
+                    onclick={() => (window.location.href = "?study=Bio100-10")}
+                >
+                    <img src="/icones/file.svg" alt="demo" class="icon" />
+                    <span class="desc">Bio100-10</span>
+                </button>
             </div>
         {/if}
     </div>
@@ -268,18 +284,6 @@
             </button>
 
             <div class="slider-container">
-                <label for="graphWidthSlider">Width</label>
-                <input
-                    id="graphWidthSlider"
-                    type="range"
-                    min="25"
-                    max="75"
-                    step="5"
-                    bind:value={store.graphWidthPercentage}
-                />
-            </div>
-
-            <div class="slider-container">
                 <label for="pointSizeSlider">Radius</label>
                 <input
                     id="pointSizeSlider"
@@ -288,6 +292,18 @@
                     max="12"
                     step="1"
                     bind:value={store.pointSize}
+                />
+            </div>
+
+            <div class="slider-container">
+                <label for="graphWidthSlider">Width</label>
+                <input
+                    id="graphWidthSlider"
+                    type="range"
+                    min="25"
+                    max="75"
+                    step="5"
+                    bind:value={store.graphWidthPercentage}
                 />
             </div>
         </div>
@@ -411,7 +427,6 @@
 
 <style>
     .toolbar {
-        width: 100%;
         height: auto;
         min-height: 56px; /* Increased slightly for labels */
         background-color: var(--light-grey); /* Microsoft light grey */
@@ -578,7 +593,7 @@
         position: absolute;
         top: 100%;
         left: 0;
-        background-color: white;
+        background-color: rgb(244, 244, 244);
         border: 1px solid #e1dfdd;
         box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         border-radius: 4px;
@@ -609,7 +624,7 @@
 
     .dropdown-content button:hover,
     .shortcut-item:hover {
-        background-color: #f3f2f1 !important; /* Microsoft light hover grey */
+        background-color: var(--light-grey) !important;
         border-radius: 2px;
     }
 
