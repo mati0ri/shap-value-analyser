@@ -62,7 +62,7 @@ class Store {
     // secondaryColor = "#007FFA";
 
 
-    async initialize(data) {
+    initialize(data) {
 
         // x normalization
         const x = data.x;
@@ -99,7 +99,7 @@ class Store {
         this.allFeatures = keys;
 
         create_data(this.allFeatures)
-        this.recomendedMerges = findInterestingMerges;
+        // this.recomendedMerges = findInterestingMerges();
 
     }
 

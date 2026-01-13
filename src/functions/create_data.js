@@ -102,12 +102,12 @@ function add_feature_to_graph(feature, ghost = false) {
 
   cleanGhost();
 
-  const rawImportance = compute_feature_importance(feature);
+  const featureImportance = compute_feature_importance(feature);
   const maxCurrent = maxFeatureImportance();
 
   const feature_importance = ghost
-    ? Math.min(rawImportance, maxCurrent)
-    : rawImportance;
+    ? Math.min(featureImportance, maxCurrent)
+    : featureImportance;
 
   if (ghost && feature_importance <= 0) return;
 
@@ -131,7 +131,9 @@ export function create_data(new_merges, ghost = false) {
   }
 }
 
+// Not used
 export function findInterestingMerges(maxFeatures = 3) {
+  console.log("findInterestingMerges")
   const features = store.allFeatures;
 
   let bestImportance = null;
@@ -203,14 +205,12 @@ export function deleteMerge(featureName) {
 }
 
 export function renameMerge(oldName) {
-  // Demander le nouveau nom à l'utilisateur
   const newName = prompt(`Entrez un nouveau nom pour le merge "${oldName}":`);
 
   if (!newName || newName.trim() === "") {
     return;
   }
 
-  // Check if name exists
   if (store.graph_data.some(d => d.feature === newName)) {
     alert("Ce nom existe déjà.");
     return;
@@ -281,19 +281,16 @@ export function renameFeature(oldName) {
     return;
   }
 
-  // Check if name exists
   if (store.graph_data.some(d => d.feature === newName)) {
     alert("Ce nom existe déjà.");
     return;
   }
 
-  // 1. Update store.allFeatures
   const idx = store.allFeatures.indexOf(oldName);
   if (idx !== -1) {
     store.allFeatures[idx] = newName;
   }
 
-  // 2. Update x and sv keys for the base feature
   // x
   for (let i = 0; i < store.x.length; i++) {
     if (store.x[i][oldName] !== undefined) {
@@ -311,7 +308,6 @@ export function renameFeature(oldName) {
     }
   }
 
-  // 3. Update graph_data for the feature itself
   store.graph_data = store.graph_data.map(g => {
     if (g.feature === oldName) {
       return { ...g, feature: newName };
@@ -319,13 +315,10 @@ export function renameFeature(oldName) {
     return g;
   });
 
-  // 4. Update Merges
-  // Update the merges array definition
   store.merges = store.merges.map(mergeArray =>
     mergeArray.map(f => (f === oldName ? newName : f))
   );
 
-  // Update dependent merges in graph_data
   store.graph_data = store.graph_data.map(g => {
     if (g.isMerge && g.children.includes(oldName)) {
       // Update children list
@@ -335,19 +328,11 @@ export function renameFeature(oldName) {
       // User rule: "If a merge contains '+feature-name+', it means that the merge was not renamed and that it's safe to change its name too."
       let newMergeName = g.feature;
 
-      // Check if old name is part of the merge name string
-      // e.g. "Age+Income" contains "Age".
-      // We look for exact word boundaries or the separator '+' usually used.
-      // But user said "contains '+feature-name+'" which implies we check if the string is just composed of joined features?
-      // Simpler heuristic based on instructions:
       if (g.feature.includes(oldName)) {
-        // Replace the old name with the new name in the string
-        // We must be careful not to replace substrings (e.g. "Age" in "Page") if that were possible.
-        // Assuming feature names are unique segments.
+
         newMergeName = g.feature.split('+').map(part => part === oldName ? newName : part).join('+');
       }
 
-      // If name changed, we must update x and sv for the merge too
       if (newMergeName !== g.feature) {
         // x
         for (let i = 0; i < store.x.length; i++) {
@@ -375,7 +360,7 @@ export function renameFeature(oldName) {
     }
     return g;
   });
-
+  
   // Update selected features if needed
   if (store.selectedFeatures.includes(oldName)) {
     const sIdx = store.selectedFeatures.indexOf(oldName);

@@ -2,33 +2,20 @@
     import { store } from "../rune/store.svelte";
     import { cleanGhost, create_data } from "../functions/create_data";
 
-    // $inspect(store.filtered_graph_data);
-
     function handleMerge() {
         const selected = store.selectedFeatures;
 
         if (selected.length <= 1) {
-            alert("Au moins 2 features doivent être sélectionnées.");
+            alert("At least 2 features must be selected.");
             return;
         }
 
-        const uniqueSelected = [...new Set(selected)];
-
-        const sortedSelected = [...uniqueSelected].sort();
-
-        const alreadyExists = store.merges.some(
-            (m) =>
-                m.length === sortedSelected.length &&
-                [...m].sort().every((v, i) => v === sortedSelected[i]),
-        );
-
-        if (alreadyExists) {
-            alert("Cette combinaison existe déjà.");
+        if (mergeExists) {
+            alert("This combination already exists.");
             return;
         }
 
         store.merges = [...store.merges, sortedSelected];
-
         create_data([sortedSelected]);
 
         store.selectedFeatures = [];
@@ -73,7 +60,8 @@
         link.click();
         document.body.removeChild(link);
     }
-    function handleKeydown(event) {
+
+    function handleKeyboardShortcuts(event) {
         if (
             document.activeElement.tagName === "INPUT" ||
             document.activeElement.tagName === "TEXTAREA"
@@ -97,6 +85,7 @@
             store.isLassoActive = !store.isLassoActive;
         }
     }
+
     let selectedUnique = $derived([...new Set(store.selectedFeatures)]);
     let sortedSelected = $derived([...selectedUnique].sort());
     let mergeExists = $derived(
@@ -139,10 +128,10 @@
     }
 </script>
 
-<svelte:window onkeydown={handleKeydown} />
+<svelte:window onkeydown={handleKeyboardShortcuts} />
 
 <div class="toolbar">
-    <!-- Section 4: Case Study -->
+    <!-- Section Case Study -->
     <div class="toolbar-section" style="position: relative;">
         <div class="section-header">
             <img src="/icones/study.svg" alt="" class="section-icon" />
@@ -170,8 +159,6 @@
 
         {#if showStudies}
             <div class="dropdown-content">
-                <!-- Hardcoded list as backup, or ideally passed from page data if available via context/props -->
-                <!-- Since footer doesn't easily get page data without props, we'll hardcode the list matching server for now or use window.location -->
                 <button
                     class="shortcut-item"
                     style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
@@ -211,7 +198,8 @@
     </div>
 
     <div class="separator"></div>
-    <!-- Section 1: Selection -->
+
+    <!-- Section Selection -->
     <div class="toolbar-section">
         <div class="section-header">
             <img src="/icones/selection.svg" alt="" class="section-icon" />
@@ -261,7 +249,7 @@
 
     <div class="separator"></div>
 
-    <!-- Section 2: Display -->
+    <!-- Section Display -->
     <div class="toolbar-section">
         <div class="section-header">
             <img src="/icones/display.svg" alt="" class="section-icon" />
@@ -311,7 +299,7 @@
 
     <div class="separator"></div>
 
-    <!-- Section 3: Export -->
+    <!-- Section Export -->
     <div class="toolbar-section">
         <div class="section-header">
             <img src="/icones/data-transfer.svg" alt="" class="section-icon" />
@@ -339,7 +327,7 @@
 
     <div class="separator"></div>
 
-    <!-- Section 5: Help -->
+    <!-- Section Help -->
     <div class="toolbar-section" style="position: relative;">
         <div class="section-header">
             <img src="/icones/help.svg" alt="" class="section-icon" />
@@ -428,11 +416,11 @@
 <style>
     .toolbar {
         height: auto;
-        min-height: 56px; /* Increased slightly for labels */
-        background-color: var(--light-grey); /* Microsoft light grey */
+        min-height: 56px;
+        background-color: var(--light-grey);
         border-bottom: 1px solid #d1d1d1;
         display: flex;
-        align-items: center; /* Vertically center the sections */
+        align-items: center;
         padding: 4px 16px;
         gap: 8px;
         font-family:
@@ -484,10 +472,9 @@
         gap: 4px;
     }
 
-    /* Standard Toolbar Button */
     .toolbar-btn {
-        background-color: transparent; /* Flat style */
-        border: 1px solid transparent; /* Reserve space for border */
+        background-color: transparent;
+        border: 1px solid transparent;
         border-radius: 4px;
         padding: 5px 8px;
         display: flex;
@@ -501,11 +488,11 @@
     }
 
     .toolbar-btn:hover {
-        background-color: #d8d8d8; /* Hover grey */
+        background-color: #d8d8d8;
     }
 
     .toolbar-btn:active {
-        background-color: #c6c6c6; /* Active grey */
+        background-color: #c6c6c6;
     }
 
     .toolbar-btn:disabled {
@@ -514,7 +501,6 @@
         pointer-events: none;
     }
 
-    /* Primary Action (Merge) */
     .toolbar-btn.primary {
         background-color: var(--primary-color);
         color: white;
@@ -532,36 +518,14 @@
         display: block;
     }
 
-    .text-icon {
-        font-weight: 600;
-        font-size: 11px;
-        text-transform: uppercase;
-        color: #605e5c;
-    }
-
-    .toolbar-info {
-        padding: 0 8px;
-        color: #605e5c;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        font-style: italic;
-    }
-
-    .info-icon {
-        font-style: normal;
-    }
-
-    /* Separator */
     .separator {
         width: 1px;
-        height: 32px; /* Increased height to match section height */
+        height: 32px;
         background-color: #c8c6c4;
         margin: 0 8px;
         align-self: center;
     }
 
-    /* Slider styling to fit toolbar */
     .slider-container {
         display: flex;
         align-items: center;
@@ -588,7 +552,6 @@
         cursor: pointer;
     }
 
-    /* Dropdowns */
     .dropdown-content {
         position: absolute;
         top: 100%;
@@ -606,7 +569,6 @@
         gap: 4px;
         text-align: left;
 
-        /* Animation */
         transform-origin: bottom left;
         animation: slideIn 0.15s ease-out;
     }
@@ -630,7 +592,7 @@
 
     .dropdown-content.axes-info {
         min-width: 300px;
-        width: 400px; /* Wider for text */
+        width: 400px;
         right: 0;
         left: auto;
     }
@@ -652,7 +614,7 @@
         gap: 12px;
         font-size: 13px;
         color: #323130;
-        padding: 6px 8px; /* Increased padding slightly */
+        padding: 6px 8px;
         cursor: pointer;
         transition: background-color 0.1s ease;
     }

@@ -19,7 +19,6 @@
           </a>
         {/each}
       </div>
-      <!-- <h2>SHAP Explorer</h2> -->
       <h2>SHAP Interpretability Dashboard</h2>
     </div>
   </div>

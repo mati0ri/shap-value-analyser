@@ -10,16 +10,18 @@
         deleteFeature,
         renameFeature,
     } from "../functions/create_data";
+    import { addButtonColumn } from "../utils/matrix/buttons";
+    import { drawSimpleToMergeLinks } from "../utils/matrix/links";
 
     let container;
 
     let width = $state(550);
     let height = $state(650);
     let padding = 100;
-    const rightMargin = 125; // Reserve space for buttons
+    const rightMargin = 125; // Garder de l'espace a droite pour les boutons
     let scrollTop = 0;
     const ROW_HEIGHT = 40;
-    let marginBottom = 49; // Adjustable margin bottom
+    let marginBottom = 49; // pixel perfect pour alignement avec le bas du graphe
 
     function handleScroll(event) {
         event.preventDefault();
@@ -86,7 +88,7 @@
             .scaleBand()
             .domain(colLabels)
             .range([padding, matrixWidth]);
-        // Y scale is now purely calculation based, not range based on height
+
         const y = d3
             .scaleBand()
             .domain(rowLabels)
@@ -102,8 +104,7 @@
             .domain([-1, 0, 1])
             .range([minColor, midColor, maxColor]);
 
-        // DEFINE CLIPPING PATH for the scrolling body
-        // The clipping area starts at `padding` (below headers) and goes down to `height`
+        // la zone de scrolling
         const clipHeight = Math.max(0, height - padding);
         svg.append("defs")
             .append("clipPath")
@@ -150,7 +151,6 @@
             .attr("class", "matrix-body")
             .attr("clip-path", "url(#matrix-scroll-clip)");
 
-        // The inner group that actually moves
         const contentGroup = scrollBody.append("g");
 
         // Labels lignes
@@ -178,268 +178,76 @@
 
         const buttonSize = 30;
 
-        // Boutons hide / show (pour simples + merges)
-        contentGroup
-            .append("g")
-            .selectAll("g")
-            .data(rowLabels)
-            .join("g")
-            .attr(
-                "transform",
-                (d) =>
-                    `translate(${matrixWidth + 10}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
-            )
-            .attr("cursor", "pointer")
-            .on("click", (event, feature) => {
+        // Boutons hide / show
+        addButtonColumn(contentGroup, rowLabels, {
+            x: matrixWidth + 10,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => {
                 toggleHidden(feature);
-                drawMatrix(); // redraw immédiat
-            })
-            .on("mouseenter", function () {
-                d3.select(this).select("rect").attr("fill", "#d1d1d1");
-            })
-            .on("mouseleave", function (event, d) {
-                const isHidden = store.hiddenFeatures.includes(d);
-                d3.select(this)
-                    .select("rect")
-                    .attr("fill", isHidden ? "#b8b8b8" : "var(--light-grey)");
-            })
-            .each(function (d) {
-                const g = d3.select(this);
-
-                const isHidden = store.hiddenFeatures.includes(d);
-
-                // fond vert/gris
-                g.append("rect")
-                    .attr("width", buttonSize)
-                    .attr("height", buttonSize)
-                    .attr("rx", 4)
-                    .attr("ry", 4)
-                    .attr("fill", isHidden ? "#b8b8b8" : "var(--light-grey)");
-
-                // icône
-                g.append("image")
-                    .attr(
-                        "href",
-                        isHidden
-                            ? "/icones/eye-closed.svg"
-                            : "/icones/eye-open.svg",
-                    )
-                    .attr("width", 18)
-                    .attr("height", 18)
-                    .attr("x", 6)
-                    .attr("y", 6);
-            });
+                drawMatrix();
+            },
+            getIcon: (d) =>
+                store.hiddenFeatures.includes(d)
+                    ? "/icones/eye-closed.svg"
+                    : "/icones/eye-open.svg",
+            getFill: (d) =>
+                store.hiddenFeatures.includes(d)
+                    ? "#b8b8b8"
+                    : "var(--light-grey)",
+        });
 
         // Boutons delete pour features simples
-        contentGroup
-            .append("g")
-            .selectAll("g")
-            .data(simpleFeatures)
-            .join("g")
-            .attr(
-                "transform",
-                (d) =>
-                    `translate(${matrixWidth + 45}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
-            )
-            .attr("cursor", "pointer")
-            .on("click", (event, feature) => {
-                deleteFeature(feature);
-            })
-            .on("mouseenter", function () {
-                d3.select(this).select("rect").attr("fill", "#d1d1d1");
-            })
-            .on("mouseleave", function () {
-                d3.select(this)
-                    .select("rect")
-                    .attr("fill", "var(--light-grey)");
-            })
-            .each(function (d) {
-                const g = d3.select(this);
-                // fond rouge
-                g.append("rect")
-                    .attr("width", buttonSize)
-                    .attr("height", buttonSize)
-                    .attr("rx", 4)
-                    .attr("ry", 4)
-                    .attr("fill", "var(--light-grey)");
-
-                // icône SVG
-                g.append("image")
-                    .attr("href", "/icones/delete.svg")
-                    .attr("width", 20)
-                    .attr("height", 20)
-                    .attr("x", 5)
-                    .attr("y", 4);
-            });
+        addButtonColumn(contentGroup, simpleFeatures, {
+            x: matrixWidth + 45,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => deleteFeature(feature),
+            getIcon: "/icones/delete.svg",
+        });
 
         // Boutons rename pour features simples
-        contentGroup
-            .append("g")
-            .selectAll("g")
-            .data(simpleFeatures)
-            .join("g")
-            .attr(
-                "transform",
-                (d) =>
-                    `translate(${matrixWidth + 80}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
-            )
-            .attr("cursor", "pointer")
-            .on("click", (event, feature) => {
-                renameFeature(feature);
-            })
-            .on("mouseenter", function () {
-                d3.select(this).select("rect").attr("fill", "#d1d1d1");
-            })
-            .on("mouseleave", function () {
-                d3.select(this)
-                    .select("rect")
-                    .attr("fill", "var(--light-grey)");
-            })
-            .each(function (d) {
-                const g = d3.select(this);
-                // fond bleu
-                g.append("rect")
-                    .attr("width", buttonSize)
-                    .attr("height", buttonSize)
-                    .attr("rx", 4)
-                    .attr("ry", 4)
-                    .attr("fill", "var(--light-grey)");
-
-                // icône SVG
-                g.append("image")
-                    .attr("href", "/icones/rename.svg")
-                    .attr("width", 20)
-                    .attr("height", 20)
-                    .attr("x", 5)
-                    .attr("y", 5);
-            });
+        addButtonColumn(contentGroup, simpleFeatures, {
+            x: matrixWidth + 80,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => renameFeature(feature),
+            getIcon: "/icones/rename.svg",
+        });
 
         // Boutons delete pour merges
-        contentGroup
-            .append("g")
-            .selectAll("g")
-            .data(mergeFeatures)
-            .join("g")
-            .attr(
-                "transform",
-                (d) =>
-                    `translate(${matrixWidth + 45}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
-            )
-            .attr("cursor", "pointer")
-            .on("click", (event, feature) => {
-                deleteMerge(feature);
-            })
-            .on("mouseenter", function () {
-                d3.select(this).select("rect").attr("fill", "#d1d1d1");
-            })
-            .on("mouseleave", function () {
-                d3.select(this)
-                    .select("rect")
-                    .attr("fill", "var(--light-grey)");
-            })
-            .each(function (d) {
-                const g = d3.select(this);
-                // fond rouge
-                g.append("rect")
-                    .attr("width", buttonSize)
-                    .attr("height", buttonSize)
-                    .attr("rx", 4)
-                    .attr("ry", 4)
-                    .attr("fill", "var(--light-grey)");
-
-                // icône SVG
-                g.append("image")
-                    .attr("href", "/icones/delete.svg")
-                    .attr("width", 20)
-                    .attr("height", 20)
-                    .attr("x", 5)
-                    .attr("y", 4);
-            });
+        addButtonColumn(contentGroup, mergeFeatures, {
+            x: matrixWidth + 45,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => deleteMerge(feature),
+            getIcon: "/icones/delete.svg",
+        });
 
         // Boutons rename pour merges
-        contentGroup
-            .append("g")
-            .selectAll("g")
-            .data(mergeFeatures)
-            .join("g")
-            .attr(
-                "transform",
-                (d) =>
-                    `translate(${matrixWidth + 80}, ${y(d) + (ROW_HEIGHT - buttonSize) / 2})`,
-            )
-            .attr("cursor", "pointer")
-            .on("click", (event, feature) => {
-                renameMerge(feature);
-            })
-            .on("mouseenter", function () {
-                d3.select(this).select("rect").attr("fill", "#d1d1d1");
-            })
-            .on("mouseleave", function () {
-                d3.select(this)
-                    .select("rect")
-                    .attr("fill", "var(--light-grey)");
-            })
-            .each(function (d) {
-                const g = d3.select(this);
-                // fond bleu
-                g.append("rect")
-                    .attr("width", buttonSize)
-                    .attr("height", buttonSize)
-                    .attr("rx", 4)
-                    .attr("ry", 4)
-                    .attr("fill", "var(--light-grey)");
+        addButtonColumn(contentGroup, mergeFeatures, {
+            x: matrixWidth + 80,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => renameMerge(feature),
+            getIcon: "/icones/rename.svg",
+        });
 
-                // icône SVG
-                g.append("image")
-                    .attr("href", "/icones/rename.svg")
-                    .attr("width", 20)
-                    .attr("height", 20)
-                    .attr("x", 5)
-                    .attr("y", 5);
-            });
-
-        // groupe pour les liens simples → merges
+        // groupe pour traits verticaux entre simple et merges
         const simpleToMergeLinksGroup = contentGroup
             .append("g")
             .attr("class", "simple-to-merge-links");
 
         function updateSimpleToMergeLinks() {
-            simpleToMergeLinksGroup.selectAll("*").remove();
-
-            // parcourir toutes les features simples
-            data.filter((d) => !d.isMerge).forEach((simpleFeature) => {
-                const featureName = simpleFeature.feature;
-
-                // chercher tous les merges contenant cette feature
-                const relevantMerges = data.filter(
-                    (d) => d.isMerge && d.children.includes(featureName),
-                );
-
-                if (relevantMerges.length > 0) {
-                    // Trouver le merge le plus bas (max Y)
-                    let maxY = -1;
-
-                    relevantMerges.forEach((merge) => {
-                        const yPos = y(merge.feature) + y.bandwidth() / 2;
-                        if (yPos > maxY) {
-                            maxY = yPos;
-                        }
-                    });
-
-                    const col = featureName;
-                    const xPos = x(col) + x.bandwidth() / 2;
-                    const ySimple = y(featureName) + y.bandwidth() / 2;
-
-                    simpleToMergeLinksGroup
-                        .append("line")
-                        .attr("x1", xPos)
-                        .attr("y1", ySimple)
-                        .attr("x2", xPos)
-                        .attr("y2", maxY)
-                        .attr("stroke", store.colorStroke)
-                        .attr("stroke-width", 2)
-                        .attr("stroke-opacity", 0.8);
-                }
+            drawSimpleToMergeLinks(simpleToMergeLinksGroup, data, {
+                xScale: x,
+                yScale: y,
+                strokeColor: store.colorStroke,
             });
         }
 
@@ -449,8 +257,8 @@
 
         contentGroup
             .append("line")
-            .attr("x1", padding - 150) // dépasse à gauche pour inclure les labels
-            .attr("x2", matrixWidth + 140) // dépasse légèrement à droite
+            .attr("x1", padding - 150) 
+            .attr("x2", matrixWidth + 140) 
             .attr("y1", separatorY)
             .attr("y2", separatorY)
             .attr("stroke", store.colorStroke)
@@ -493,8 +301,8 @@
                     .attr("y", y(feature))
                     .attr("width", matrixWidth - padding)
                     .attr("height", y.bandwidth())
-                    .attr("fill", "rgba(100,100,100,0.03)") // 10% gris
-                    .attr("pointer-events", "none"); // ne bloque rien
+                    .attr("fill", "rgba(100,100,100,0.03)")
+                    .attr("pointer-events", "none");
             }
         });
 
@@ -510,9 +318,9 @@
             .append("rect")
             .attr("width", x.bandwidth())
             .attr("height", y.bandwidth())
-            .attr("fill", "rgba(200,200,200,0)") // transparent par défaut
+            .attr("fill", "rgba(200,200,200,0)")
             .attr("class", "hover-bg")
-            .attr("pointer-events", "none"); // ne bloque pas les clics
+            .attr("pointer-events", "none");
 
         // pour les “cases intéressantes”, ajouter un point
         cellGroup
@@ -566,19 +374,11 @@
             .attr("fill", "transparent")
             .attr("pointer-events", "all");
 
-        // événements : tu peux les attacher au rect ou au cercle — par exemple au rect :
-        // Helper to handle selection
         function handleFeatureClick(featureName) {
             const selected = store.selectedFeatures;
             const f = data.find((x) => x.feature === featureName);
 
-            // Fallback for click on simple feature column (which might map to a hidden row but still valid col)
-            // or just simple feature
-
             if (!f) {
-                // Try simpler logic if not found in filtered data directly (e.g. maybe hidden)
-                // But generally data drives the labels.
-                // Assuming featureName is valid.
                 const i = selected.indexOf(featureName);
                 i === -1 ? selected.push(featureName) : selected.splice(i, 1);
             } else {
@@ -610,14 +410,6 @@
                 store.hoveredMatrix = [];
             })
             .on("click", (event, d) => {
-                // If clicking a cell, we usually selecting the row feature?
-                // Or if it is diagonal/merge-child, we select the feature at that intersection.
-                // The previous logic used d.fullData which comes from the row.
-                // "return { row, col, isDiagonal, isMergeChild, fullData };"
-
-                // Wait, original logic used `d.fullData` which is the row feature.
-                // So clicking a cell toggles the ROW feature.
-                // Let's preserve that.
                 if (d.fullData) {
                     handleFeatureClick(d.fullData.feature);
                 }
@@ -630,14 +422,14 @@
                 ...(store.hoveredMatrix || []),
             ]);
 
-            // 1. Backgrounds
+            // Backgrounds
             svg.selectAll(".hover-bg").attr("fill", (d) =>
                 targets.has(d.row)
                     ? "rgba(199, 30, 255, 0.1)"
                     : "rgba(200,200,200,0)",
             );
 
-            // 2. Row Labels
+            // Row Labels
             contentGroup
                 .selectAll("text")
                 .attr("font-weight", (d) =>
@@ -647,7 +439,7 @@
                     targets.has(d) ? store.colorSelectedStroke : null,
                 );
 
-            // 3. Column Labels
+            // Column Labels
             const activeColumns = new Set();
             targets.forEach((featureName) => {
                 const fd = data.find((x) => x.feature === featureName);
@@ -737,8 +529,6 @@
 
     $effect(() => {
         if (!matrixApi) return;
-        // Trigger on changes to hoveredGraph, selectedFeatures, or hoveredMatrix
-        // Reading them registers the dependency.
         const _deps = [
             store.hoveredGraph,
             store.selectedFeatures,

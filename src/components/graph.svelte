@@ -3,6 +3,8 @@
     import { onMount } from "svelte";
     import { store } from "../rune/store.svelte";
     import { create_data, cleanGhost } from "../functions/create_data";
+    import { computeGreedyLayout } from "../utils/graph/labelLayout";
+    import { computeLinks } from "../utils/graph/links";
 
     let graphDiv;
 
@@ -151,7 +153,7 @@
             .attr("font-size", 18)
             .text("Direction");
 
-        // ########### GUIDES & LABELS (Last to be on top) ###########
+        // ########### GUIDES & LABELS ###########
         const guideGroup = svg.append("g").attr("class", "guides");
 
         const guideLineX = guideGroup
@@ -171,8 +173,6 @@
             .attr("stroke", "#666")
             .attr("stroke-width", 1)
             .attr("stroke-dasharray", "1 5");
-
-        // Backgrounds for labels
 
         // Backgrounds for labels
         const xLabelBg = guideGroup
@@ -221,71 +221,6 @@
             .append("g")
             .attr("class", "merge-selected-links");
 
-        // Helper functions for link calculation
-        function linkAllSubsets(rootMerge, level = 0, linksArray) {
-            const children = rootMerge.children;
-            const total = children.length;
-
-            for (let k = total - 1; k >= 1; k--) {
-                const candidates = data.filter((other) => {
-                    if (other.feature === rootMerge.feature) return false;
-
-                    if (k === 1 && !other.isMerge) {
-                        return children.includes(other.feature);
-                    }
-
-                    if (!other.isMerge) return false;
-                    if (other.children.length !== k) return false;
-
-                    return other.children.every((c) => children.includes(c));
-                });
-
-                candidates.forEach((sub) => {
-                    linksArray.push({
-                        parent: rootMerge,
-                        child: sub,
-                        level: level,
-                    });
-
-                    if (sub.isMerge) {
-                        linkAllSubsets(sub, level + 1, linksArray);
-                    }
-                });
-            }
-        }
-
-        function isParentOf(parent, child) {
-            if (!parent.isMerge) return false;
-            if (child.isMerge) {
-                return child.children.every((c) => parent.children.includes(c));
-            }
-            return parent.children.includes(child.feature);
-        }
-
-        function removeDuplicateLinks(links) {
-            const seen = new Set();
-            return links.filter(({ parent, child }) => {
-                const key = parent.feature + "->" + child.feature;
-                if (seen.has(key)) return false;
-                seen.add(key);
-                return true;
-            });
-        }
-
-        function filterLinks(links) {
-            return links.filter((linkA) => {
-                const A = linkA.parent;
-                const E = linkA.child;
-
-                const hasLowerLink = links.some((linkB) => {
-                    const P = linkB.parent;
-                    return P !== A && isParentOf(A, P) && linkB.child === E;
-                });
-
-                return !hasLowerLink;
-            });
-        }
-
         function updateMergeSelectedLinks() {
             selectedLinksGroup.selectAll("*").remove();
 
@@ -295,23 +230,9 @@
                         store.selectedFeatures.includes(c),
                     );
                     if (allChildrenSelected) {
-                        // Use the same logic as hover
-                        let allLinks = [];
-                        linkAllSubsets(d, 0, allLinks);
-                        allLinks = removeDuplicateLinks(allLinks);
-                        const finalLinks = filterLinks(allLinks);
+                        const finalLinks = computeLinks(d, data);
 
                         finalLinks.forEach(({ parent, child }) => {
-                            // Only draw if the child is also fully selected (if it's a merge) or selected (if it's a feature)
-                            // Actually, if the parent is selected (all children selected),
-                            // and we are drawing the substructure, we might want to see the whole structure
-                            // OR we only want to see links between things that are explicitly selected?
-                            // "Aim is to suppress links when not needed" -> The purple logic suppresses transitive links.
-                            // The user says: "I see a ghost and grey lines... I would like these lines to be calculated the same way as the purple lines"
-                            // If `d` (the root merge) is selected, then by definition all its children are selected.
-                            // So `linkAllSubsets` will find all subsets which are also implicitly selected.
-                            // So we can just draw them.
-
                             selectedLinksGroup
                                 .append("line")
                                 .attr("x1", x(parent.deterministic_effect))
@@ -417,12 +338,7 @@
             let allLinks = [];
 
             if (d.isMerge) {
-                allLinks = [];
-                linkAllSubsets(d, 0, allLinks); // Pass allLinks array
-
-                allLinks = removeDuplicateLinks(allLinks);
-
-                const finalLinks = filterLinks(allLinks);
+                const finalLinks = computeLinks(d, data);
 
                 finalLinks.forEach(({ parent, child }) => {
                     hoverMergeLinksGroup
@@ -570,187 +486,21 @@
                 cleanHoverCircle();
             });
 
-        function computeGreedyLayout(data) {
-            const padding = 0;
-            const obstacles = [];
-
-            // points
-            data.forEach((d) => {
-                if (d.isGhost) return;
-                const px = x(d.deterministic_effect);
-                const py = y(d.feature_importance);
-                const r = store.pointSize + 5;
-
-                obstacles.push({
-                    x: px,
-                    y: py,
-                    halfW: r + padding,
-                    halfH: r + padding,
-                    type: "point",
-                });
-            });
-
-            // labels
-            let labels = data
-                .filter((d) => !d.isGhost && !store.hideLabels)
-                .map((d) => ({
-                    feature: d.feature,
-                    width: d.feature.length * 7,
-                    height: 14,
-                    anchorX: x(d.deterministic_effect),
-                    anchorY: y(d.feature_importance),
-                    x: 0,
-                    y: 0,
-                }));
-
-            // Tri : on place les labels de bas en haut, de gauche en droite
-            labels.sort((a, b) => {
-                if (Math.abs(a.anchorY - b.anchorY) > 0.001) {
-                    return b.anchorY - a.anchorY;
-                }
-                return a.anchorX - b.anchorX;
-            });
-
-            // directions (anti-horaire depuis le sud)
-            const numDirs = 128;
-            const startAngle = Math.PI / 2;
-            const directions = [];
-
-            for (let i = 0; i < numDirs; i++) {
-                const angle = startAngle - (i * 2 * Math.PI) / numDirs;
-                let dx = Math.cos(angle);
-                let dy = Math.sin(angle);
-
-                if (Math.abs(dx) < 1e-10) dx = 0;
-                if (Math.abs(dy) < 1e-10) dy = 0;
-
-                directions.push({ dx, dy, index: i });
-            }
-
-            // placement
-            const maxRadius = 250;
-            const step = 1;
-            const maxValidRings = store.allFeatures.length / 3;
-            const kNN = Math.round(store.allFeatures.length / 4);
-
-            labels.forEach((lbl) => {
-                const halfW = lbl.width / 2;
-                const halfH = lbl.height / 2;
-                const pointR = store.pointSize;
-                const startR = pointR + halfH + padding;
-
-                const ringCandidates = [];
-
-                for (let r = startR; r < maxRadius; r += step) {
-                    const candidates = [];
-
-                    for (const dir of directions) {
-                        const cx = lbl.anchorX + dir.dx * r;
-                        const cy = lbl.anchorY + dir.dy * r;
-
-                        // Limites viewport
-                        if (
-                            cx - halfW < margin.left ||
-                            cx + halfW > width - margin.right ||
-                            cy - halfH < margin.top ||
-                            cy + halfH > height - margin.bottom
-                        ) {
-                            continue;
-                        }
-
-                        // Collision check
-                        let collision = false;
-                        const distances = [];
-
-                        for (const obs of obstacles) {
-                            const distW = halfW + obs.halfW;
-                            const distH = halfH + obs.halfH;
-
-                            if (
-                                Math.abs(cx - obs.x) < distW &&
-                                Math.abs(cy - obs.y) < distH
-                            ) {
-                                collision = true;
-                                break;
-                            }
-
-                            const dx = cx - obs.x;
-                            const dy = cy - obs.y;
-                            distances.push(Math.sqrt(dx * dx + dy * dy));
-                        }
-
-                        if (collision) continue;
-
-                        // k-NN clearance
-                        distances.sort((a, b) => a - b);
-                        const k = Math.min(kNN, distances.length);
-                        let sum = 0;
-                        for (let i = 0; i < k; i++) sum += distances[i];
-                        const clearance = sum / k;
-
-                        candidates.push({
-                            x: cx,
-                            y: cy,
-                            r,
-                            clearance,
-                            dirIndex: dir.index,
-                        });
-                    }
-
-                    if (candidates.length > 0) {
-                        ringCandidates.push(...candidates);
-                        if (ringCandidates.length >= maxValidRings * numDirs) {
-                            break;
-                        }
-                    }
-                }
-
-                // Choix global parmi les premiers rayons valides
-                let best = null;
-                let bestScore = -Infinity;
-
-                for (const c of ringCandidates) {
-                    // Cap du clearance pour éviter que des voisins très lointains ne repoussent le label
-                    // Si on a déjà 100px de libre, pas la peine d'aller plus loin chercher 200px
-                    const cappedClearance = Math.min(c.clearance, 100);
-                    const score = cappedClearance - 0.6 * c.r;
-
-                    if (score > bestScore) {
-                        bestScore = score;
-                        best = c;
-                    }
-                }
-
-                // Fallback (rare)
-                if (!best) {
-                    best = {
-                        x: lbl.anchorX,
-                        y: lbl.anchorY + startR + 10,
-                    };
-                }
-
-                lbl.x = best.x;
-                lbl.y = best.y;
-
-                // Ajouter le label comme obstacle
-                obstacles.push({
-                    x: lbl.x,
-                    y: lbl.y,
-                    halfW: halfW + padding,
-                    halfH: halfH + padding,
-                    type: "label",
-                });
-            });
-
-            return labels;
-        }
-
         const colorScale = d3
             .scaleLinear()
             .domain([-1, 0, 1])
             .range([minColor, midColor, maxColor]);
 
-        const labelLayout = computeGreedyLayout(data);
+        const labelLayout = computeGreedyLayout(data, {
+            xScale: x,
+            yScale: y,
+            width,
+            height,
+            margin,
+            pointSize: store.pointSize,
+            hideLabels: store.hideLabels,
+            allFeaturesLength: store.allFeatures.length,
+        });
 
         points.each(function (d) {
             const g = d3.select(this);
@@ -834,7 +584,7 @@
                     Math.pow(d.x - px, 2) + Math.pow(d.y - py, 2),
                 );
                 const lineGroup = wrapper.select(".label-lines-group");
-                // Use filter to strictly match feature name to avoid selector issues with special chars
+
                 let line = lineGroup.selectAll("line").filter(function () {
                     return d3.select(this).attr("data-feature") === d.feature;
                 });
@@ -894,11 +644,6 @@
         });
 
         // ########### LASSO LAYER ###########
-        // Must be on top of points but maybe below labels if we want labels draggable?
-        // Actually user said "happens only in the graph component".
-        // If we want to draw ON TOP of everything, append last.
-        // But if labels are draggable, we need to decide precedence.
-        // If lasso is ACTIVE, it should probably consume events, so on top.
 
         const lassoGroup = svg.append("g").attr("class", "lasso-group");
 
@@ -1095,7 +840,5 @@
     bind:this={graphDiv}
     bind:clientWidth={width}
     bind:clientHeight={height}
-    style="cursor: {store.isLassoActive
-        ? 'crosshair'
-        : 'default'}; flex: {store.graphWidthPercentage}; height: 100%; min-width: 400px; min-height: 400px; overflow: hidden; position: relative;"
+    style="flex: {store.graphWidthPercentage}; height: 100%; min-width: 400px; min-height: 400px; overflow: hidden; position: relative;"
 ></div>
