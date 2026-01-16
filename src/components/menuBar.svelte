@@ -193,6 +193,14 @@
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Bio100-10</span>
                 </button>
+                <button
+                    class="shortcut-item"
+                    style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
+                    onclick={() => (window.location.href = "?study=Test")}
+                >
+                    <img src="/icones/file.svg" alt="demo" class="icon" />
+                    <span class="desc">Test</span>
+                </button>
             </div>
         {/if}
     </div>

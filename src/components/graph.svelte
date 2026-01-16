@@ -11,6 +11,8 @@
     let width = $state(1100);
     let height = $state(800);
 
+    $inspect(store.filtered_graph_data)
+
     function drawGraph() {
         if (!width || !height) return;
 
@@ -19,7 +21,7 @@
         const data = store.filtered_graph_data;
 
         // responsive dimensions are bound to width/height
-        const margin = { top: 20, right: 90, bottom: 50, left: 65 };
+        const margin = { top: 20, right: 90, bottom: 55, left: 65 };
 
         const wrapper = d3.select(graphDiv);
         // .style("border", "1px solid #ccc");
@@ -49,6 +51,21 @@
             .style("display", "none")
             .style("z-index", "100")
             .style("box-shadow", "0 2px 6px rgba(0,0,0,0.15)");
+
+        // Separate tooltip for icons to avoid style conflicts
+        const iconTooltip = wrapper
+            .append("div")
+            .style("position", "absolute")
+            .style("background", "white")
+            .style("border", "1px solid #ccc")
+            .style("padding", "6px 10px")
+            .style("border-radius", "4px")
+            .style("pointer-events", "none")
+            .style("font-size", "15px")
+            .style("display", "none")
+            .style("z-index", "100")
+            .style("box-shadow", "0 2px 6px rgba(0,0,0,0.15)")
+            .style("width", "200px"); // Fixed width only for icon tooltips
 
         // axes
         // les echelles
@@ -152,6 +169,157 @@
             .attr("text-anchor", "middle")
             .attr("font-size", 18)
             .text("Direction");
+
+        // ########### ICONS ###########
+
+        const iconConfig = {
+            de: {
+                yOffset: 35,
+                size: 50,
+            },
+            fi: {
+                xOffset: -35,
+                size: 30,
+            },
+            dir: {
+                xOffset: 15,
+                size: 50,
+            },
+        };
+
+        const iconTooltips = {
+            "de-faible":
+                "A low deterministic effect indicates a random or inconsistent influence between feature value and model prediction",
+            "de-fort":
+                "A high deterministic effect indicates a strong, consistent relationship between feature value and model prediction",
+            "fi-faible":
+                "A low feature importance indicates the feature has minimal impact on the model's output",
+            "fi-fort":
+                "A high feature importance indicates the feature has significant impact on the model's output",
+            "dir-faible":
+                "Negative values indicate that a high feature value tends to decrease the predicted value and a low feature value tends to increase the prediction value",
+            "dir-fort":
+                "Positive values indicate that a high feature value tends to increase the predicted value and a low feature value tends to decrease the prediction value",
+        };
+
+        function showIconTooltip(event, text) {
+            const [mx, my] = d3.pointer(event, graphDiv);
+
+            iconTooltip
+                .style("display", "block")
+                // width is already set in initialization
+                .html(`<div>${text}</div>`);
+
+            // Calculate position to keep within bounds
+            const tooltipNode = iconTooltip.node();
+            const bbox = tooltipNode.getBoundingClientRect();
+
+            let tx = mx + 15;
+            let ty = my + 15;
+
+            // Check right edge
+            if (tx + bbox.width > width) {
+                tx = mx - bbox.width - 15;
+            }
+
+            // Check bottom edge
+            if (ty + bbox.height > height) {
+                ty = my - bbox.height - 15;
+            }
+
+            // Check top edge (rare but possible for top icons)
+            if (ty < 0) {
+                ty = my + 15;
+            }
+
+            iconTooltip.style("left", tx + "px").style("top", ty + "px");
+        }
+
+        const iconGroup = svg.append("g").attr("class", "axis-icons");
+
+        // Helper to append icon with tooltip
+        function appendIcon(href, w, h, x, y, tooltipKey) {
+            iconGroup
+                .append("image")
+                .attr("href", href)
+                .attr("width", w)
+                .attr("height", h)
+                .attr("x", x)
+                .attr("y", y)
+                .on("mouseenter", (event) =>
+                    showIconTooltip(event, iconTooltips[tooltipKey]),
+                )
+                .on("mouseleave", () => iconTooltip.style("display", "none"));
+        }
+
+        // Deterministic Effect Icons (X Axis)
+        // Faible (Low) -> 0
+        appendIcon(
+            "/icones/axis/de-faible.svg",
+            iconConfig.de.size,
+            iconConfig.de.size,
+            margin.left + 10,
+            height -
+                margin.bottom +
+                iconConfig.de.yOffset -
+                iconConfig.de.size / 2,
+            "de-faible",
+        );
+
+        // Fort (High) -> 1
+        appendIcon(
+            "/icones/axis/de-fort.svg",
+            iconConfig.de.size,
+            iconConfig.de.size,
+            width - margin.right - iconConfig.de.size - 10,
+            height -
+                margin.bottom +
+                iconConfig.de.yOffset -
+                iconConfig.de.size / 2,
+            "de-fort",
+        );
+
+        // Feature Importance Icons (Y Axis)
+        // Faible (Low) -> 0 (Bottom)
+        appendIcon(
+            "/icones/axis/fi-faible.svg",
+            iconConfig.fi.size,
+            iconConfig.fi.size,
+            margin.left + iconConfig.fi.xOffset - iconConfig.fi.size / 2,
+            height - margin.bottom - iconConfig.fi.size - 15,
+            "fi-faible",
+        );
+
+        // Fort (High) -> Max (Top)
+        appendIcon(
+            "/icones/axis/fi-fort.svg",
+            iconConfig.fi.size,
+            iconConfig.fi.size,
+            margin.left + iconConfig.fi.xOffset - iconConfig.fi.size / 2,
+            margin.top + 15,
+            "fi-fort",
+        );
+
+        // Direction Icons (Legend Axis)
+        // Faible (Low) -> -1 (Bottom)
+        appendIcon(
+            "/icones/axis/dir-faible.svg",
+            iconConfig.dir.size,
+            iconConfig.dir.size,
+            legendX + legendW + iconConfig.dir.xOffset,
+            legendY + legendH - iconConfig.dir.size - 15,
+            "dir-faible",
+        );
+
+        // Fort (High) -> 1 (Top)
+        appendIcon(
+            "/icones/axis/dir-fort.svg",
+            iconConfig.dir.size,
+            iconConfig.dir.size,
+            legendX + legendW + iconConfig.dir.xOffset,
+            legendY + 15,
+            "dir-fort",
+        );
 
         // ########### GUIDES & LABELS ###########
         const guideGroup = svg.append("g").attr("class", "guides");

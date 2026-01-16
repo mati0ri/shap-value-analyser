@@ -22,7 +22,8 @@ export function load({ url }) {
         "Bio-allFeatures-withoutHumanFootprints",
         "Bio10",
         "Bio100-10",
-        "Titanic"
+        "Titanic",
+        "Test"
     ];
 
     let currentStudy = "Bio-allFeatures-withoutHumanFootprints"; // Default
