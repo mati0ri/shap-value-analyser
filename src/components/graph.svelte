@@ -139,13 +139,13 @@
         });
 
         // rectangle gradiant
-        svg.append("rect")
-            .attr("class", "direction-legend")
-            .attr("x", legendX)
-            .attr("y", legendY)
-            .attr("width", legendW)
-            .attr("height", legendH)
-            .attr("fill", "url(#directionGrad)");
+        // svg.append("rect")
+        //     .attr("class", "direction-legend")
+        //     .attr("x", legendX)
+        //     .attr("y", legendY)
+        //     .attr("width", legendW)
+        //     .attr("height", legendH)
+        //     .attr("fill", "url(#directionGrad)");
 
         // axe avec les ticks a droite
         const dirScale = d3
@@ -153,22 +153,22 @@
             .domain([-1, 1])
             .range([legendH - 1, 0]);
 
-        svg.append("g")
-            .attr("class", "dir-axis")
-            .attr("transform", `translate(${legendX + legendW},${legendY})`)
-            .call(d3.axisRight(dirScale).ticks(5))
-            .call((g) => g.select(".domain").remove()); // enlever la ligne de l'axe (je trouve ca plus joli)
+        // svg.append("g")
+        //     .attr("class", "dir-axis")
+        //     .attr("transform", `translate(${legendX + legendW},${legendY})`)
+        //     .call(d3.axisRight(dirScale).ticks(5))
+        //     .call((g) => g.select(".domain").remove()); // enlever la ligne de l'axe (je trouve ca plus joli)
 
         // titre
-        svg.append("text")
-            .attr("class", "direction-title")
-            .attr(
-                "transform",
-                `translate(${legendX + legendW + 50}, ${legendY + legendH / 2}) rotate(90)`,
-            )
-            .attr("text-anchor", "middle")
-            .attr("font-size", 18)
-            .text("Direction");
+        // svg.append("text")
+        //     .attr("class", "direction-title")
+        //     .attr(
+        //         "transform",
+        //         `translate(${legendX + legendW + 50}, ${legendY + legendH / 2}) rotate(90)`,
+        //     )
+        //     .attr("text-anchor", "middle")
+        //     .attr("font-size", 18)
+        //     .text("Direction");
 
         // ########### ICONS ###########
 
@@ -300,26 +300,26 @@
             "fi-fort",
         );
 
-        // Direction Icons (Legend Axis)
-        // Faible (Low) -> -1 (Bottom)
-        appendIcon(
-            "/icones/axis/dir-faible.svg",
-            iconConfig.dir.size,
-            iconConfig.dir.size,
-            legendX + legendW + iconConfig.dir.xOffset,
-            legendY + legendH - iconConfig.dir.size - 15,
-            "dir-faible",
-        );
+        // // Direction Icons (Legend Axis)
+        // // Faible (Low) -> -1 (Bottom)
+        // appendIcon(
+        //     "/icones/axis/dir-faible.svg",
+        //     iconConfig.dir.size,
+        //     iconConfig.dir.size,
+        //     legendX + legendW + iconConfig.dir.xOffset,
+        //     legendY + legendH - iconConfig.dir.size - 15,
+        //     "dir-faible",
+        // );
 
-        // Fort (High) -> 1 (Top)
-        appendIcon(
-            "/icones/axis/dir-fort.svg",
-            iconConfig.dir.size,
-            iconConfig.dir.size,
-            legendX + legendW + iconConfig.dir.xOffset,
-            legendY + 15,
-            "dir-fort",
-        );
+        // // Fort (High) -> 1 (Top)
+        // appendIcon(
+        //     "/icones/axis/dir-fort.svg",
+        //     iconConfig.dir.size,
+        //     iconConfig.dir.size,
+        //     legendX + legendW + iconConfig.dir.xOffset,
+        //     legendY + 15,
+        //     "dir-fort",
+        // );
 
         // ########### GUIDES & LABELS ###########
         const guideGroup = svg.append("g").attr("class", "guides");
@@ -336,11 +336,11 @@
             .attr("stroke-width", 1)
             .attr("stroke-dasharray", "1 5");
 
-        const guideLineDir = guideGroup
-            .append("line")
-            .attr("stroke", "#666")
-            .attr("stroke-width", 1)
-            .attr("stroke-dasharray", "1 5");
+        // const guideLineDir = guideGroup
+        //     .append("line")
+        //     .attr("stroke", "#666")
+        //     .attr("stroke-width", 1)
+        //     .attr("stroke-dasharray", "1 5");
 
         // Backgrounds for labels
         const xLabelBg = guideGroup
@@ -357,12 +357,12 @@
             .attr("rx", 2)
             .style("display", "none");
 
-        const dirLabelBg = guideGroup
-            .append("rect")
-            .attr("fill", "var(--background-color)")
-            .attr("opacity", 0.8)
-            .attr("rx", 2)
-            .style("display", "none");
+        // const dirLabelBg = guideGroup
+        //     .append("rect")
+        //     .attr("fill", "var(--background-color)")
+        //     .attr("opacity", 0.8)
+        //     .attr("rx", 2)
+        //     .style("display", "none");
 
         const xLabel = guideGroup
             .append("text")
@@ -376,11 +376,11 @@
             .attr("font-weight", "bold")
             .style("display", "none");
 
-        const dirLabel = guideGroup
-            .append("text")
-            .attr("font-size", 14)
-            .attr("font-weight", "bold")
-            .style("display", "none");
+        // const dirLabel = guideGroup
+        //     .append("text")
+        //     .attr("font-size", 14)
+        //     .attr("font-weight", "bold")
+        //     .style("display", "none");
 
         // ########### LIENS GRIS MERGES SELECTIONNES ###########
 
@@ -447,12 +447,12 @@
                 .attr("y2", cy)
                 .style("display", "block");
 
-            guideLineDir
-                .attr("x1", cx)
-                .attr("x2", legendX)
-                .attr("y1", cy)
-                .attr("y2", legendY + dirScale(d.direction))
-                .style("display", "block");
+            // guideLineDir
+            //     .attr("x1", cx)
+            //     .attr("x2", legendX)
+            //     .attr("y1", cy)
+            //     .attr("y2", legendY + dirScale(d.direction))
+            //     .style("display", "block");
 
             // labels guidelines
             xLabel
@@ -485,19 +485,19 @@
                 .attr("height", yBBox.height + 2)
                 .style("display", "block");
 
-            dirLabel
-                .attr("x", legendX + legendW + 8)
-                .attr("y", legendY + dirScale(d.direction))
-                .text(d.direction.toFixed(2))
-                .style("display", "block");
+            // dirLabel
+            //     .attr("x", legendX + legendW + 8)
+            //     .attr("y", legendY + dirScale(d.direction))
+            //     .text(d.direction.toFixed(2))
+            //     .style("display", "block");
 
-            const dirBBox = dirLabel.node().getBBox();
-            dirLabelBg
-                .attr("x", dirBBox.x - 2)
-                .attr("y", dirBBox.y - 1)
-                .attr("width", dirBBox.width + 4)
-                .attr("height", dirBBox.height + 2)
-                .style("display", "block");
+            // const dirBBox = dirLabel.node().getBBox();
+            // dirLabelBg
+            //     .attr("x", dirBBox.x - 2)
+            //     .attr("y", dirBBox.y - 1)
+            //     .attr("width", dirBBox.width + 4)
+            //     .attr("height", dirBBox.height + 2)
+            //     .style("display", "block");
 
             // ###### LOGIQUE LINKS ######
 
@@ -559,15 +559,15 @@
 
             guideLineX.style("display", "none");
             guideLineY.style("display", "none");
-            guideLineDir.style("display", "none");
+            // guideLineDir.style("display", "none");
 
             xLabel.style("display", "none");
             yLabel.style("display", "none");
-            dirLabel.style("display", "none");
+            // dirLabel.style("display", "none");
 
             xLabelBg.style("display", "none");
             yLabelBg.style("display", "none");
-            dirLabelBg.style("display", "none");
+            // dirLabelBg.style("display", "none");
 
             hoverMergeLinksGroup.selectAll("*").remove();
 

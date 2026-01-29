@@ -12,6 +12,7 @@ class Store {
     downloadGraphSvg = () => { };
     graphWidthPercentage = $state(50);
     isLassoActive = $state(false);
+    expertMode = $state(false);
 
     isSelectedNew = $derived.by(() => {
         const selected = this.selectedFeatures;
