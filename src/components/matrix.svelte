@@ -257,8 +257,8 @@
 
         contentGroup
             .append("line")
-            .attr("x1", padding - 150) 
-            .attr("x2", matrixWidth + 140) 
+            .attr("x1", padding - 150)
+            .attr("x2", matrixWidth + 140)
             .attr("y1", separatorY)
             .attr("y2", separatorY)
             .attr("stroke", store.colorStroke)
@@ -323,8 +323,11 @@
             .attr("pointer-events", "none");
 
         // pour les “cases intéressantes”, ajouter un point
-        cellGroup
-            .filter((d) => d.isDiagonal || d.isMergeChild)
+        const interestingCells = cellGroup.filter(
+            (d) => d.isDiagonal || d.isMergeChild,
+        );
+
+        interestingCells
             .append("circle")
             .attr("cx", x.bandwidth() / 2)
             .attr("cy", y.bandwidth() / 2)
@@ -344,12 +347,7 @@
                 return isSelected ? 4 : 1.5;
             })
             .attr("class", "gold-point")
-            .attr("fill", (d) => {
-                const f = d.fullData;
-                if (!f) return "green";
-
-                return colorScale(f.direction);
-            })
+            .attr("fill", "#e0e0e0")
 
             .attr("stroke", (d) => {
                 const selected = store.selectedFeatures;
@@ -365,6 +363,34 @@
                     ? store.colorSelectedStroke
                     : store.colorStroke;
             });
+
+        interestingCells
+            .append("image")
+            .attr("href", "/icones/arrow.svg")
+            .attr("width", Math.min(x.bandwidth() * 0.6, y.bandwidth() * 0.6))
+            .attr("height", Math.min(x.bandwidth() * 0.6, y.bandwidth() * 0.6))
+            .attr(
+                "x",
+                (x.bandwidth() -
+                    Math.min(x.bandwidth() * 0.6, y.bandwidth() * 0.6)) /
+                    2,
+            )
+            .attr(
+                "y",
+                (y.bandwidth() -
+                    Math.min(x.bandwidth() * 0.6, y.bandwidth() * 0.6)) /
+                    2,
+            )
+            .attr("transform", (d) => {
+                const cx = x.bandwidth() / 2;
+                const cy = y.bandwidth() / 2;
+                const dir = d.fullData ? d.fullData.direction : 0;
+                // dir 1 -> -45deg (UP-RIGHT)
+                // dir -1 -> +45deg (DOWN-RIGHT)
+                const angle = -dir * 45;
+                return `rotate(${angle}, ${cx}, ${cy})`;
+            })
+            .attr("pointer-events", "none");
 
         cellGroup
             .append("rect")

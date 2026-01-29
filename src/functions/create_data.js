@@ -111,13 +111,15 @@ function add_feature_to_graph(feature, ghost = false) {
 
   if (ghost && feature_importance <= 0) return;
 
+  const det = compute_deterministic_effect(feature);
+
   store.graph_data = [
     ...store.graph_data,
     {
       feature: key,
       feature_importance,
-      direction: compute_direction(feature),
-      deterministic_effect: compute_deterministic_effect(feature),
+      direction: Math.sign(det - 0.5),
+      deterministic_effect: 2 * Math.abs(det - 0.5),
       isMerge: Array.isArray(feature) && feature.length > 1,
       isGhost: ghost,
       children: Array.isArray(feature) ? [...feature] : []

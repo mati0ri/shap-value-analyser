@@ -11,7 +11,7 @@
     let width = $state(1100);
     let height = $state(800);
 
-    $inspect(store.filtered_graph_data)
+    $inspect(store.filtered_graph_data);
 
     function drawGraph() {
         if (!width || !height) return;
@@ -683,7 +683,7 @@
                                 .type(d3.symbolTriangle)
                                 .size(Math.pow(store.pointSize * 2, 2)),
                         )
-                        .attr("fill", colorScale(d.direction))
+                        .attr("fill", "#e0e0e0")
                         .attr("stroke", store.colorStroke)
                         .attr("stroke-dasharray", "4 2")
                         .attr("stroke-width", 1.5)
@@ -701,7 +701,7 @@
                             .type(d3.symbolTriangle)
                             .size(Math.pow(store.pointSize * 2, 2)),
                     )
-                    .attr("fill", colorScale(d.direction))
+                    .attr("fill", "#e0e0e0")
                     .attr(
                         "stroke",
                         allChildrenSelected
@@ -714,7 +714,7 @@
                 const isSelected = store.selectedFeatures.includes(d.feature);
                 g.append("circle")
                     .attr("r", store.pointSize)
-                    .attr("fill", colorScale(d.direction))
+                    .attr("fill", "#e0e0e0")
                     .attr(
                         "stroke",
                         isSelected
@@ -724,6 +724,18 @@
                     .attr("stroke-width", isSelected ? 3 : 1.5)
 
                     .attr("stroke-opacity", 1);
+            }
+
+            if (!d.isGhost || store.isSelectedNew) {
+                const arrowSize = store.pointSize * 1.5;
+                g.append("image")
+                    .attr("href", "/icones/arrow.svg")
+                    .attr("width", arrowSize)
+                    .attr("height", arrowSize)
+                    .attr("x", -arrowSize / 2)
+                    .attr("y", -arrowSize / 2)
+                    .attr("transform", `rotate(${-d.direction * 45})`)
+                    .attr("pointer-events", "none");
             }
 
             updateMergeSelectedLinks();

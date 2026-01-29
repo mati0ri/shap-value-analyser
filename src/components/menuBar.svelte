@@ -201,6 +201,22 @@
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Test</span>
                 </button>
+                <button
+                    class="shortcut-item"
+                    style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
+                    onclick={() => (window.location.href = "?study=California")}
+                >
+                    <img src="/icones/file.svg" alt="demo" class="icon" />
+                    <span class="desc">California</span>
+                </button>
+                <button
+                    class="shortcut-item"
+                    style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
+                    onclick={() => (window.location.href = "?study=Turnover")}
+                >
+                    <img src="/icones/file.svg" alt="demo" class="icon" />
+                    <span class="desc">Turnover</span>
+                </button>
             </div>
         {/if}
     </div>

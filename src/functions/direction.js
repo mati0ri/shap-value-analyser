@@ -1,13 +1,15 @@
 import { store } from "../rune/store.svelte";
 import { mean, max } from 'd3-array';
 
-function direction(xValsRaw, shapValsRaw) {
-    const n = Math.min(xValsRaw.length, shapValsRaw.length);
+function direction(feature, effect) {
+
+    const n = Math.min(feature.length, effect.length);
 
     const pairs = [];
+    
     for (let i = 0; i < n; i++) {
-        const x = +xValsRaw[i];
-        const s = +shapValsRaw[i];
+        const x = +feature[i];
+        const s = +effect[i];
         if (Number.isFinite(x) && Number.isFinite(s)) pairs.push({ x, s });
     }
     if (!pairs.length) return 0;
