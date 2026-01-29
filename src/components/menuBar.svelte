@@ -300,8 +300,8 @@
                 <input
                     id="pointSizeSlider"
                     type="range"
-                    min="2"
-                    max="12"
+                    min="5"
+                    max="15"
                     step="1"
                     bind:value={store.pointSize}
                 />

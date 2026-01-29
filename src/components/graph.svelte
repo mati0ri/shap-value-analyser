@@ -21,7 +21,7 @@
         const data = store.filtered_graph_data;
 
         // responsive dimensions are bound to width/height
-        const margin = { top: 20, right: 90, bottom: 55, left: 65 };
+        const margin = { top: 20, right: 40, bottom: 55, left: 65 };
 
         const wrapper = d3.select(graphDiv);
         // .style("border", "1px solid #ccc");
@@ -37,20 +37,6 @@
             .style("position", "absolute")
             .style("top", "0")
             .style("left", "0");
-
-        // bulle avec le nom de la variable lors du hover
-        const tooltip = wrapper
-            .append("div")
-            .style("position", "absolute")
-            .style("background", "white")
-            .style("border", "1px solid #ccc")
-            .style("padding", "6px 10px")
-            .style("border-radius", "4px")
-            .style("pointer-events", "none")
-            .style("font-size", "15px")
-            .style("display", "none")
-            .style("z-index", "100")
-            .style("box-shadow", "0 2px 6px rgba(0,0,0,0.15)");
 
         // Separate tooltip for icons to avoid style conflicts
         const iconTooltip = wrapper
@@ -179,12 +165,12 @@
             },
             fi: {
                 xOffset: -35,
-                size: 30,
-            },
-            dir: {
-                xOffset: 15,
                 size: 50,
             },
+            // dir: {
+            //     xOffset: 15,
+            //     size: 50,
+            // },
         };
 
         const iconTooltips = {
@@ -426,11 +412,16 @@
             const cx = x(d.deterministic_effect);
             const cy = y(d.feature_importance);
 
-            tooltip
-                .style("display", "block")
-                .style("left", cx + 15 + "px")
-                .style("top", cy - 17 + "px")
-                .html(`<div><b>${d.feature}</b></div>`);
+            labelGroup
+                .selectAll("text")
+                .attr("fill", (l) =>
+                    l.feature === d.feature
+                        ? store.colorSelectedStroke
+                        : "black",
+                )
+                .attr("font-weight", (l) =>
+                    l.feature === d.feature ? "bold" : "normal",
+                );
 
             // lignes guidelines
             guideLineY
@@ -555,7 +546,10 @@
         }
 
         function cleanHoverCircle() {
-            tooltip.style("display", "none");
+            labelGroup
+                .selectAll("text")
+                .attr("fill", "black")
+                .attr("font-weight", "normal");
 
             guideLineX.style("display", "none");
             guideLineY.style("display", "none");
@@ -727,7 +721,7 @@
             }
 
             if (!d.isGhost || store.isSelectedNew) {
-                const arrowSize = store.pointSize * 1.5;
+                const arrowSize = store.pointSize * 1.8;
                 g.append("image")
                     .attr("href", "/icones/arrow.svg")
                     .attr("width", arrowSize)

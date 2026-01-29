@@ -8,7 +8,7 @@ class Store {
     hoveredGraph = $state([]);
     hoveredMatrix = $state([]);
     hideLabels = $state(false);
-    pointSize = $state(7);
+    pointSize = $state(10);
     downloadGraphSvg = () => { };
     graphWidthPercentage = $state(50);
     isLassoActive = $state(false);

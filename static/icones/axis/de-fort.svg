@@ -1,56 +1,25 @@
-<svg width="243" height="191" viewBox="0 0 243 191" fill="none" xmlns="http://www.w3.org/2000/svg">
-<rect x="121" width="2" height="191" fill="#BEBEBE"/>
-<rect x="121" width="2" height="191" fill="#BEBEBE"/>
-<rect x="243" y="95" width="2" height="243" transform="rotate(90 243 95)" fill="#BEBEBE"/>
-<rect x="243" y="95" width="2" height="243" transform="rotate(90 243 95)" fill="#BEBEBE"/>
-<mask id="mask0_106_26" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="15" y="10" width="214" height="172">
-<rect x="108.577" y="31.4771" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="113.946" y="151.9" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="73.2939" y="87.4697" width="19.1756" height="19.1756" rx="9.58782" fill="#C3C3C3"/>
-<rect x="80.1973" y="110.48" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="180.678" y="82.1006" width="19.1756" height="19.1756" rx="9.58782" fill="#3D3D3D"/>
-<rect x="182.212" y="104.344" width="19.1756" height="19.1756" rx="9.58782" fill="#3D3D3D"/>
-<rect x="64.8564" y="62.1577" width="19.1756" height="19.1756" rx="9.58782" fill="#C3C3C3"/>
-<rect x="56.4189" y="105.111" width="19.1756" height="19.1756" rx="9.58782" fill="#C3C3C3"/>
-<rect x="15" y="81.3335" width="19.1756" height="19.1756" rx="9.58782" fill="#C3C3C3"/>
-<rect x="150.764" y="95.1401" width="19.1756" height="19.1756" rx="9.58782" fill="#3D3D3D"/>
-<rect x="137.724" y="72.8965" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="115.48" y="78.2656" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="156.899" y="118.151" width="19.1756" height="19.1756" rx="9.58782" fill="#3D3D3D"/>
-<rect x="113.946" y="54.4878" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="127.753" y="105.111" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="138.491" y="132.725" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="111.646" y="124.287" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="89.4014" y="137.327" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="103.208" y="100.509" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="91.7031" y="74.4302" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="89.4014" y="49.8857" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="136.957" y="45.2837" width="19.1756" height="19.1756" rx="9.58782" fill="#858585"/>
-<rect x="161.502" y="69.8281" width="19.1756" height="19.1756" rx="9.58782" fill="#3D3D3D"/>
-<rect x="56.4189" y="146.531" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 56.4189 146.531)" fill="#C3C3C3"/>
-<rect x="64.8564" y="99.7422" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 64.8564 99.7422)" fill="#C3C3C3"/>
-<rect x="110.878" y="181.047" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 110.878 181.047)" fill="#858585"/>
-<rect x="183.745" y="159.57" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 183.745 159.57)" fill="#3D3D3D"/>
-<rect x="205.223" y="78.2656" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 205.223 78.2656)" fill="#3D3D3D"/>
-<rect x="184.513" y="64.459" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 184.513 64.459)" fill="#3D3D3D"/>
-<rect x="229" y="118.151" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 229 118.151)" fill="#3D3D3D"/>
-<rect x="75.5947" y="59.8569" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 75.5947 59.8569)" fill="#C3C3C3"/>
-<rect x="124.685" y="29.1758" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 124.685 29.1758)" fill="#858585"/>
-<rect x="156.899" y="40.6812" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 156.899 40.6812)" fill="#858585"/>
-<rect x="159.968" y="174.144" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 159.968 174.144)" fill="#858585"/>
-<rect x="225.932" y="93.606" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 225.932 93.606)" fill="#3D3D3D"/>
-<rect x="100.907" y="48.3516" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 100.907 48.3516)" fill="#858585"/>
-<rect x="83.2656" y="146.531" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 83.2656 146.531)" fill="#C3C3C3"/>
-<rect x="87.8672" y="168.774" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 87.8672 168.774)" fill="#C3C3C3"/>
-<rect x="55.6523" y="77.4985" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 55.6523 77.4985)" fill="#C3C3C3"/>
-<rect x="45.6807" y="122.753" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 45.6807 122.753)" fill="#C3C3C3"/>
-<rect x="205.989" y="144.997" width="19.1756" height="19.1756" rx="9.58782" transform="rotate(180 205.989 144.997)" fill="#3D3D3D"/>
+<svg width="197" height="100" viewBox="0 0 197 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect x="30" y="40" width="20" height="20" rx="10" fill="#C3C3C3"/>
+<rect x="147" y="40" width="20" height="20" rx="10" fill="#3D3D3D"/>
+<mask id="mask0_167_649" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="49" y="0" width="99" height="100">
+<rect x="108" y="40" width="20" height="20" rx="10" fill="#C3C3C3"/>
+<rect x="69" y="40" width="20" height="20" rx="10" fill="#C3C3C3"/>
+<rect x="127" y="20" width="20" height="20" rx="10" fill="#C3C3C3"/>
+<rect x="88" y="20" width="20" height="20" rx="10" fill="#C3C3C3"/>
+<rect x="49" y="20" width="20" height="20" rx="10" fill="#C3C3C3"/>
+<rect x="107" width="20" height="20" rx="10" fill="#C3C3C3"/>
+<rect x="69" width="20" height="20" rx="10" fill="#C3C3C3"/>
+<rect width="20" height="20" rx="10" transform="matrix(1 0 0 -1 128 80)" fill="#C3C3C3"/>
+<rect width="20" height="20" rx="10" transform="matrix(1 0 0 -1 89 80)" fill="#C3C3C3"/>
+<rect width="20" height="20" rx="10" transform="matrix(1 0 0 -1 50 80)" fill="#C3C3C3"/>
+<rect width="20" height="20" rx="10" transform="matrix(1 0 0 -1 108 100)" fill="#C3C3C3"/>
+<rect width="20" height="20" rx="10" transform="matrix(1 0 0 -1 70 100)" fill="#C3C3C3"/>
 </mask>
-<g mask="url(#mask0_106_26)">
-<rect x="12" y="3" width="220" height="196" fill="url(#paint0_linear_106_26)"/>
+<g mask="url(#mask0_167_649)">
+<rect x="49" width="99" height="100" fill="url(#paint0_linear_167_649)"/>
 </g>
 <defs>
-<linearGradient id="paint0_linear_106_26" x1="12" y1="101" x2="232" y2="101" gradientUnits="userSpaceOnUse">
+<linearGradient id="paint0_linear_167_649" x1="49" y1="50" x2="148" y2="50" gradientUnits="userSpaceOnUse">
 <stop stop-color="#C3C3C3"/>
 <stop offset="1" stop-color="#3D3D3D"/>
 </linearGradient>

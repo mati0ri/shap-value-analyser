@@ -367,18 +367,18 @@
         interestingCells
             .append("image")
             .attr("href", "/icones/arrow.svg")
-            .attr("width", Math.min(x.bandwidth() * 0.6, y.bandwidth() * 0.6))
-            .attr("height", Math.min(x.bandwidth() * 0.6, y.bandwidth() * 0.6))
+            .attr("width", Math.min(x.bandwidth() * 0.5, y.bandwidth() * 0.5))
+            .attr("height", Math.min(x.bandwidth() * 0.5, y.bandwidth() * 0.5))
             .attr(
                 "x",
                 (x.bandwidth() -
-                    Math.min(x.bandwidth() * 0.6, y.bandwidth() * 0.6)) /
+                    Math.min(x.bandwidth() * 0.5, y.bandwidth() * 0.5)) /
                     2,
             )
             .attr(
                 "y",
                 (y.bandwidth() -
-                    Math.min(x.bandwidth() * 0.6, y.bandwidth() * 0.6)) /
+                    Math.min(x.bandwidth() * 0.5, y.bandwidth() * 0.5)) /
                     2,
             )
             .attr("transform", (d) => {

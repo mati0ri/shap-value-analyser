@@ -119,7 +119,9 @@ function add_feature_to_graph(feature, ghost = false) {
       feature: key,
       feature_importance,
       direction: Math.sign(det - 0.5),
+      expert_direction: compute_direction(feature),
       deterministic_effect: 2 * Math.abs(det - 0.5),
+      expert_deterministic_effect: 2 * Math.abs(det - 0.5),
       isMerge: Array.isArray(feature) && feature.length > 1,
       isGhost: ghost,
       children: Array.isArray(feature) ? [...feature] : []
