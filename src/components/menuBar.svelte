@@ -318,6 +318,37 @@
                     bind:value={store.graphWidthPercentage}
                 />
             </div>
+
+            <div class="separator-small"></div>
+
+            <div class="mode-toggle">
+                <span
+                    class="mode-label"
+                    class:active={!store.expertMode}
+                    onclick={() => (store.expertMode = false)}
+                    title="Classic">Classic</span
+                >
+                <div
+                    class="toggle-switch"
+                    onclick={() => (store.expertMode = !store.expertMode)}
+                    role="button"
+                    tabindex="0"
+                    onkeydown={(e) =>
+                        (e.key === "Enter" || e.key === " ") &&
+                        (store.expertMode = !store.expertMode)}
+                >
+                    <div
+                        class="toggle-thumb"
+                        class:active={store.expertMode}
+                    ></div>
+                </div>
+                <span
+                    class="mode-label"
+                    class:active={store.expertMode}
+                    onclick={() => (store.expertMode = true)}
+                    title="Expert">Expert</span
+                >
+            </div>
         </div>
     </div>
 
@@ -508,7 +539,6 @@
         color: #323130;
         transition: all 0.1s ease-in-out;
         white-space: nowrap;
-        font-size: 14px;
     }
 
     .toolbar-btn:hover {
@@ -550,6 +580,14 @@
         align-self: center;
     }
 
+    .separator-small {
+        width: 1px;
+        height: 20px;
+        background-color: #c8c6c4;
+        margin: 0 4px;
+        align-self: center;
+    }
+
     .slider-container {
         display: flex;
         align-items: center;
@@ -563,9 +601,10 @@
     }
 
     .slider-container label {
-        font-size: 13px;
         color: #323130;
         white-space: nowrap;
+        position: relative;
+        top: -1px;
     }
 
     input[type="range"] {
@@ -610,7 +649,7 @@
 
     .dropdown-content button:hover,
     .shortcut-item:hover {
-        background-color: var(--light-grey) !important;
+        background-color: var(--light-grey);
         border-radius: 2px;
     }
 
@@ -664,6 +703,67 @@
     }
 
     .toolbar-btn.active {
-        background-color: #e1dfdd;
+        background-color: #c6c6c6;
+    }
+
+    .mode-toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-left: 8px;
+    }
+
+    .mode-label {
+        color: #605e5c;
+        cursor: pointer;
+        transition: color 0.2s;
+        text-align: center;
+        position: relative;
+        top: -1px;
+    }
+
+    /* Reserve space for bold text without layout shift */
+    .mode-label::after {
+        display: block;
+        content: attr(title);
+        font-weight: 600;
+        height: 0;
+        overflow: hidden;
+        visibility: hidden;
+    }
+
+    .mode-label.active {
+        color: #201f1e;
+        font-weight: 600;
+    }
+
+    .toggle-switch {
+        width: 36px;
+        height: 20px;
+        background-color: #c8c6c4;
+        border-radius: 10px;
+        position: relative;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .toggle-switch:hover {
+        background-color: #a19f9d;
+    }
+
+    .toggle-thumb {
+        width: 16px;
+        height: 16px;
+        background-color: white;
+        border-radius: 50%;
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        transition: transform 0.2s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .toggle-thumb.active {
+        transform: translateX(16px);
     }
 </style>

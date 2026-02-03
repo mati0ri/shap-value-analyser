@@ -1,7 +1,7 @@
 <script>
     import * as d3 from "d3";
     import { store } from "../rune/store.svelte";
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { deleteMerge } from "../functions/create_data";
     import { renameMerge } from "../functions/create_data";
     import {
@@ -21,7 +21,7 @@
     const rightMargin = 125; // Garder de l'espace a droite pour les boutons
     let scrollTop = 0;
     const ROW_HEIGHT = 40;
-    let marginBottom = 49; // pixel perfect pour alignement avec le bas du graphe
+    let marginBottom = 55; // pixel perfect pour alignement avec le bas du graphe
 
     function handleScroll(event) {
         event.preventDefault();
@@ -306,32 +306,41 @@
             }
         });
 
-        const cellGroup = contentGroup
+        // Layer 1: Highlights (Background)
+        const highlightLayer = contentGroup
             .append("g")
-            .selectAll("g")
-            .data(cellsData)
-            .join("g")
-            .attr("transform", (d) => `translate(${x(d.col)}, ${y(d.row)})`)
-            .attr("data-row", (d) => d.row);
+            .attr("class", "layer-highlights");
 
-        cellGroup
-            .append("rect")
+        highlightLayer
+            .selectAll("rect")
+            .data(cellsData)
+            .join("rect")
+            .attr("transform", (d) => `translate(${x(d.col)}, ${y(d.row)})`)
             .attr("width", x.bandwidth())
             .attr("height", y.bandwidth())
             .attr("fill", "rgba(200,200,200,0)")
             .attr("class", "hover-bg")
             .attr("pointer-events", "none");
 
-        // pour les “cases intéressantes”, ajouter un point
-        const interestingCells = cellGroup.filter(
+        // Layer 2: Dots & Arrows (Content)
+        const dotsLayer = contentGroup.append("g").attr("class", "layer-dots");
+
+        const interestingCellsData = cellsData.filter(
             (d) => d.isDiagonal || d.isMergeChild,
         );
+
+        const interestingCells = dotsLayer
+            .selectAll("g")
+            .data(interestingCellsData)
+            .join("g")
+            .attr("transform", (d) => `translate(${x(d.col)}, ${y(d.row)})`)
+            .attr("data-row", (d) => d.row);
 
         interestingCells
             .append("circle")
             .attr("cx", x.bandwidth() / 2)
             .attr("cy", y.bandwidth() / 2)
-            .attr("r", Math.min(x.bandwidth() * 0.3, y.bandwidth() * 0.3))
+            .attr("r", y.bandwidth() * 0.24)
             .attr("stroke", store.colorStroke)
             .attr("stroke-opacity", 1)
             .attr("stroke-width", (d) => {
@@ -344,7 +353,7 @@
                         (f.isMerge &&
                             f.children.every((c) => selected.includes(c))));
 
-                return isSelected ? 4 : 1.5;
+                return isSelected ? 3 : 1.5;
             })
             .attr("class", "gold-point")
             .attr("fill", "#e0e0e0")
@@ -367,33 +376,37 @@
         interestingCells
             .append("image")
             .attr("href", "/icones/arrow.svg")
-            .attr("width", Math.min(x.bandwidth() * 0.5, y.bandwidth() * 0.5))
-            .attr("height", Math.min(x.bandwidth() * 0.5, y.bandwidth() * 0.5))
-            .attr(
-                "x",
-                (x.bandwidth() -
-                    Math.min(x.bandwidth() * 0.5, y.bandwidth() * 0.5)) /
-                    2,
-            )
-            .attr(
-                "y",
-                (y.bandwidth() -
-                    Math.min(x.bandwidth() * 0.5, y.bandwidth() * 0.5)) /
-                    2,
-            )
+            .attr("width", y.bandwidth() * 0.4)
+            .attr("height", y.bandwidth() * 0.4)
+            .attr("x", (x.bandwidth() - y.bandwidth() * 0.4) / 2)
+            .attr("y", (y.bandwidth() - y.bandwidth() * 0.4) / 2)
             .attr("transform", (d) => {
                 const cx = x.bandwidth() / 2;
                 const cy = y.bandwidth() / 2;
-                const dir = d.fullData ? d.fullData.direction : 0;
+                const dir = d.fullData
+                    ? untrack(() => store.expertMode)
+                        ? d.fullData.expert_direction
+                        : d.fullData.direction
+                    : 0;
                 // dir 1 -> -45deg (UP-RIGHT)
                 // dir -1 -> +45deg (DOWN-RIGHT)
-                const angle = -dir * 45;
+                const angle = untrack(() => store.expertMode)
+                    ? (-dir / store.maxExpertDirection) * 45
+                    : -dir * 45;
                 return `rotate(${angle}, ${cx}, ${cy})`;
             })
             .attr("pointer-events", "none");
 
-        cellGroup
-            .append("rect")
+        // Layer 3: Event Catchers (Top)
+        const eventLayer = contentGroup
+            .append("g")
+            .attr("class", "layer-events");
+
+        eventLayer
+            .selectAll("rect")
+            .data(cellsData)
+            .join("rect")
+            .attr("transform", (d) => `translate(${x(d.col)}, ${y(d.row)})`)
             .attr("class", "event-catcher")
             .attr("width", x.bandwidth())
             .attr("height", y.bandwidth())
@@ -427,8 +440,8 @@
             updateSimpleToMergeLinks();
         }
 
-        cellGroup
-            .select(".event-catcher")
+        eventLayer
+            .selectAll(".event-catcher")
             .on("mouseenter", (event, d) => {
                 store.hoveredMatrix = [d.row];
             })
@@ -542,8 +555,29 @@
 
         updateSimpleToMergeLinks();
 
+        function updateMode() {
+            const isExpert = store.expertMode;
+            interestingCells.select("image").each(function (d) {
+                const cx = x.bandwidth() / 2;
+                const cy = y.bandwidth() / 2;
+                const dir = d.fullData
+                    ? isExpert
+                        ? d.fullData.expert_direction
+                        : d.fullData.direction
+                    : 0;
+                const angle = isExpert
+                    ? (-dir / store.maxExpertDirection) * 45
+                    : -dir * 45;
+                d3.select(this)
+                    .transition()
+                    .duration(1000)
+                    .attr("transform", `rotate(${angle}, ${cx}, ${cy})`);
+            });
+        }
+
         return {
             updateHighlights,
+            updateMode,
         };
     }
 
@@ -565,6 +599,13 @@
 
     $effect(() => {
         matrixApi = drawMatrix();
+    });
+
+    $effect(() => {
+        store.expertMode;
+        if (matrixApi && matrixApi.updateMode) {
+            matrixApi.updateMode();
+        }
     });
 </script>
 

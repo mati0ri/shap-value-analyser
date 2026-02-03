@@ -49,6 +49,10 @@ class Store {
         )
     );
 
+    maxExpertDirection = $derived.by(() =>
+        Math.max(...this.filtered_graph_data.map(d => Math.abs(d.expert_direction)))
+    );
+
     recomendedMerges = $state(null);
 
     // colors

@@ -1,6 +1,6 @@
 import { store } from "../rune/store.svelte";
 import { compute_feature_importance } from "./feature_importance";
-import { compute_deterministic_effect } from "./deterministic_effect";
+import { compute_deterministic_effect, compute_expert_deterministic_effect } from "./deterministic_effect";
 import { compute_direction } from "./direction";
 
 // Helpers
@@ -121,7 +121,7 @@ function add_feature_to_graph(feature, ghost = false) {
       direction: Math.sign(det - 0.5),
       expert_direction: compute_direction(feature),
       deterministic_effect: 2 * Math.abs(det - 0.5),
-      expert_deterministic_effect: 2 * Math.abs(det - 0.5),
+      expert_deterministic_effect: compute_expert_deterministic_effect(feature),
       isMerge: Array.isArray(feature) && feature.length > 1,
       isGhost: ghost,
       children: Array.isArray(feature) ? [...feature] : []

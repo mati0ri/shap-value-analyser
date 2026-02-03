@@ -1,6 +1,6 @@
 <script>
     import * as d3 from "d3";
-    import { onMount } from "svelte";
+    import { onMount, untrack } from "svelte";
     import { store } from "../rune/store.svelte";
     import { create_data, cleanGhost } from "../functions/create_data";
     import { computeGreedyLayout } from "../utils/graph/labelLayout";
@@ -12,6 +12,7 @@
     let height = $state(800);
 
     $inspect(store.filtered_graph_data);
+    $inspect(store.maxExpertDirection);
 
     function drawGraph() {
         if (!width || !height) return;
@@ -387,12 +388,25 @@
                         const finalLinks = computeLinks(d, data);
 
                         finalLinks.forEach(({ parent, child }) => {
+                            const px = x(
+                                store.expertMode
+                                    ? parent.expert_deterministic_effect
+                                    : parent.deterministic_effect,
+                            );
+                            const py = y(parent.feature_importance);
+                            const cx = x(
+                                store.expertMode
+                                    ? child.expert_deterministic_effect
+                                    : child.deterministic_effect,
+                            );
+                            const cy = y(child.feature_importance);
+
                             selectedLinksGroup
                                 .append("line")
-                                .attr("x1", x(parent.deterministic_effect))
-                                .attr("y1", y(parent.feature_importance))
-                                .attr("x2", x(child.deterministic_effect))
-                                .attr("y2", y(child.feature_importance))
+                                .attr("x1", px)
+                                .attr("y1", py)
+                                .attr("x2", cx)
+                                .attr("y2", cy)
                                 .attr("stroke", "#d4d4d4")
                                 .attr("stroke-width", 1.5);
                         });
@@ -409,7 +423,10 @@
             .attr("class", "merge-lines");
 
         function hoverCircle(d) {
-            const cx = x(d.deterministic_effect);
+            const valX = store.expertMode
+                ? d.expert_deterministic_effect
+                : d.deterministic_effect;
+            const cx = x(valX);
             const cy = y(d.feature_importance);
 
             labelGroup
@@ -450,7 +467,7 @@
                 .attr("x", cx)
                 .attr("y", height - margin.bottom + 20)
                 .attr("text-anchor", "middle")
-                .text(d.deterministic_effect.toFixed(2))
+                .text(valX.toFixed(2))
                 .style("display", "block");
 
             const xBBox = xLabel.node().getBBox();
@@ -500,11 +517,17 @@
                 const finalLinks = computeLinks(d, data);
 
                 finalLinks.forEach(({ parent, child }) => {
+                    const pbX = store.expertMode
+                        ? parent.expert_deterministic_effect
+                        : parent.deterministic_effect;
+                    const cbX = store.expertMode
+                        ? child.expert_deterministic_effect
+                        : child.deterministic_effect;
                     hoverMergeLinksGroup
                         .append("line")
-                        .attr("x1", x(parent.deterministic_effect))
+                        .attr("x1", x(pbX))
                         .attr("y1", y(parent.feature_importance))
-                        .attr("x2", x(child.deterministic_effect))
+                        .attr("x2", x(cbX))
                         .attr("y2", y(child.feature_importance))
                         .attr("stroke", store.colorSelectedStroke + 80)
                         .attr("stroke-width", 1.5);
@@ -613,7 +636,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${x(d.deterministic_effect)}, ${y(d.feature_importance)})`,
+                    `translate(${x(untrack(() => store.expertMode) ? d.expert_deterministic_effect : d.deterministic_effect)}, ${y(d.feature_importance)})`,
             )
             .style("cursor", "pointer")
             .on("click", (event, d) => {
@@ -653,7 +676,15 @@
             .domain([-1, 0, 1])
             .range([minColor, midColor, maxColor]);
 
-        const labelLayout = computeGreedyLayout(data, {
+        // Préparer les données pour le layout : on simule que 'deterministic_effect' est la valeur experte si besoin
+        const layoutData = data.map((d) => ({
+            ...d,
+            deterministic_effect: untrack(() => store.expertMode)
+                ? d.expert_deterministic_effect
+                : d.deterministic_effect,
+        }));
+
+        const labelLayout = computeGreedyLayout(layoutData, {
             xScale: x,
             yScale: y,
             width,
@@ -722,13 +753,21 @@
 
             if (!d.isGhost || store.isSelectedNew) {
                 const arrowSize = store.pointSize * 1.8;
+                const direction = untrack(() => store.expertMode)
+                    ? d.expert_direction
+                    : d.direction;
                 g.append("image")
                     .attr("href", "/icones/arrow.svg")
                     .attr("width", arrowSize)
                     .attr("height", arrowSize)
                     .attr("x", -arrowSize / 2)
                     .attr("y", -arrowSize / 2)
-                    .attr("transform", `rotate(${-d.direction * 45})`)
+                    .attr(
+                        "transform",
+                        untrack(() => store.expertMode)
+                            ? `rotate(${(-direction / store.maxExpertDirection) * 45})`
+                            : `rotate(${-direction * 45})`,
+                    )
                     .attr("pointer-events", "none");
             }
 
@@ -751,7 +790,10 @@
                 const originalData = data.find(
                     (item) => item.feature === d.feature,
                 );
-                const px = x(originalData.deterministic_effect);
+                const valX = store.expertMode
+                    ? originalData.expert_deterministic_effect
+                    : originalData.deterministic_effect;
+                const px = x(valX);
                 const py = y(originalData.feature_importance);
 
                 const dist = Math.sqrt(
@@ -784,38 +826,147 @@
                 d3.select(this).style("cursor", "grab");
             });
 
-        labelLayout.forEach((label) => {
-            const d = data.find((item) => item.feature === label.feature);
-            const g = labelGroup
-                .append("g")
-                .datum(label) // Bind data so drag handler receives it
-                .attr("transform", `translate(${label.x}, ${label.y})`)
-                .style("cursor", "grab")
-                .call(drag);
+        const labelsSelection = labelGroup
+            .selectAll("g")
+            .data(labelLayout, (d) => d.feature)
+            .join("g")
+            .attr("class", "label-node")
+            .attr("transform", (d) => `translate(${d.x}, ${d.y})`)
+            .style("cursor", "grab")
+            .call(drag);
+
+        labelsSelection.each(function (label) {
+            const g = d3.select(this);
+            // Clear existing content to prevent duplicates on redraw if join logic changes or just to be safe
+            g.selectAll("*").remove();
 
             g.append("text")
                 .attr("text-anchor", "middle")
                 .attr("font-size", "12px")
                 .text(label.feature)
-                .style("user-select", "none"); // Prevent text selection while dragging
+                .style("user-select", "none");
 
             // ligne entre le point et le label si trop éloigné
             const dist = Math.sqrt(
-                Math.pow(label.x - x(d.deterministic_effect), 2) +
-                    Math.pow(label.y - y(d.feature_importance), 2),
+                Math.pow(label.x - label.anchorX, 2) +
+                    Math.pow(label.y - label.anchorY, 2),
             );
+
             if (dist > 40) {
                 labelLinesGroup
                     .append("line")
-                    .attr("data-feature", label.feature) // Identifier for drag updates
-                    .attr("x1", x(d.deterministic_effect))
-                    .attr("y1", y(d.feature_importance))
+                    .attr("data-feature", label.feature)
+                    .attr("x1", label.anchorX)
+                    .attr("y1", label.anchorY)
                     .attr("x2", label.x)
                     .attr("y2", label.y)
                     .attr("stroke", "#ccc")
                     .attr("stroke-dasharray", "2,2");
             }
         });
+
+        // ########### UPDATE MODE ###########
+
+        function updateMode() {
+            const isExpert = store.expertMode;
+
+            // 1. Update Points Position
+            points
+                .transition()
+                .duration(1000)
+                .attr("transform", (d) => {
+                    const valX = isExpert
+                        ? d.expert_deterministic_effect
+                        : d.deterministic_effect;
+                    return `translate(${x(valX)}, ${y(d.feature_importance)})`;
+                });
+
+            // 2. Update Arrows Rotation
+            points.selectAll("image").each(function (d) {
+                if (d.isGhost && !store.isSelectedNew) return;
+                const dir = isExpert ? d.expert_direction : d.direction;
+                d3.select(this)
+                    .transition()
+                    .duration(1000)
+                    .attr(
+                        "transform",
+                        isExpert
+                            ? `rotate(${(-dir / store.maxExpertDirection) * 45})`
+                            : `rotate(${-dir * 45})`,
+                    );
+            });
+
+            // 3. Update Labels
+            // Recalculate layout with new anchors
+            const newLayoutData = data.map((d) => ({
+                ...d,
+                deterministic_effect: isExpert
+                    ? d.expert_deterministic_effect
+                    : d.deterministic_effect,
+            }));
+
+            // Clean lines for relayout
+            labelLinesGroup.selectAll("line").remove();
+
+            const newLabelLayout = computeGreedyLayout(newLayoutData, {
+                xScale: x,
+                yScale: y,
+                width,
+                height,
+                margin,
+                pointSize: store.pointSize,
+                hideLabels: store.hideLabels,
+                allFeaturesLength: store.allFeatures.length,
+            });
+
+            const labels = labelGroup
+                .selectAll("g.label-node")
+                .data(newLabelLayout, (d) => d.feature);
+
+            labels
+                .transition()
+                .duration(1000)
+                .attr("transform", (d) => `translate(${d.x}, ${d.y})`);
+
+            // Re-draw connection lines after transition (or during? lines hard to transition efficiently without complex join)
+            // Ideally we transition lines. Creating new lines is easier.
+            // Let's just draw them at the end or try to transition.
+            // Since `labelLinesGroup` was cleared, we can't transition.
+            // Let's add them back immediately for new positions? No, checking distance is needed.
+            // We'll skip animating lines for now or just set them at the end.
+            // Simpler: Just update lines at the end of transition?
+            // Actually, let's just redraw lines after calculation. They might jump.
+            // Users asked for "x translation + arrow rotation".
+            newLabelLayout.forEach((label) => {
+                const dist = Math.sqrt(
+                    Math.pow(label.x - label.anchorX, 2) +
+                        Math.pow(label.y - label.anchorY, 2),
+                );
+
+                if (dist > 40) {
+                    labelLinesGroup
+                        .append("line") // This will jump. It's acceptable for now as lines are minor.
+                        .attr("data-feature", label.feature)
+                        .attr("x1", label.anchorX)
+                        .attr("y1", label.anchorY)
+                        .attr("x2", label.x)
+                        .attr("y2", label.y)
+                        .attr("stroke", "#ccc")
+                        .attr("stroke-dasharray", "2,2")
+                        .attr("opacity", 0)
+                        .transition()
+                        .duration(1000)
+                        .attr("opacity", 1);
+                }
+            });
+
+            // 4. Update Merges Lines (selected)
+            updateMergeSelectedLinks(); // This rebuilds lines immediately, might jump.
+            // To animate, we'd need to select and transition.
+            // Let's leave it jumping for now as per "x translation + arrow rotation" request.
+            // Actually, updateMergeSelectedLinks uses `store.expertMode` which is now updated.
+            // We can perhaps improve it but let's stick to core request first.
+        }
 
         // ########### LASSO LAYER ###########
 
@@ -926,6 +1077,7 @@
             externalHover,
             externalClear,
             updateLassoVisuals,
+            updateMode,
         };
     }
 
@@ -1006,6 +1158,15 @@
     $effect(() => {
         if (graphApi) {
             graphApi.updateLassoVisuals(store.isLassoActive);
+        }
+    });
+
+    $effect(() => {
+        // Track expert mode changes
+        store.expertMode;
+        // Trigger transition if api exists
+        if (graphApi && graphApi.updateMode) {
+            graphApi.updateMode();
         }
     });
 </script>
