@@ -390,9 +390,15 @@
                     : 0;
                 // dir 1 -> -45deg (UP-RIGHT)
                 // dir -1 -> +45deg (DOWN-RIGHT)
-                const angle = untrack(() => store.expertMode)
-                    ? (-dir / store.maxExpertDirection) * 45
-                    : -dir * 45;
+                let ratio = 0;
+                if (untrack(() => store.expertMode)) {
+                    ratio = -dir / store.maxExpertDirection;
+                    if (ratio > 1) ratio = 1;
+                    if (ratio < -1) ratio = -1;
+                } else {
+                    ratio = -dir;
+                }
+                const angle = ratio * 45;
                 return `rotate(${angle}, ${cx}, ${cy})`;
             })
             .attr("pointer-events", "none");
@@ -565,9 +571,15 @@
                         ? d.fullData.expert_direction
                         : d.fullData.direction
                     : 0;
-                const angle = isExpert
-                    ? (-dir / store.maxExpertDirection) * 45
-                    : -dir * 45;
+                let ratio = 0;
+                if (isExpert) {
+                    ratio = -dir / store.maxExpertDirection;
+                    if (ratio > 1) ratio = 1;
+                    if (ratio < -1) ratio = -1;
+                } else {
+                    ratio = -dir;
+                }
+                const angle = ratio * 45;
                 d3.select(this)
                     .transition()
                     .duration(1000)
