@@ -93,6 +93,47 @@
             .attr("font-size", 18)
             .text("Feature importance");
 
+        // Highlight region for deterministic_effect > 0.6
+        svg.append("rect")
+            .attr("x", x(0.6))
+            .attr("y", margin.top)
+            .attr("width", x(1) - x(0.6))
+            .attr("height", height - margin.top - margin.bottom)
+            .attr("fill", "var(--gradient-color)")
+            .attr("opacity", 0.05)
+            .style("pointer-events", "none");
+
+        svg.append("rect")
+            .attr("x", x(0.8))
+            .attr("y", margin.top)
+            .attr("width", x(1) - x(0.8))
+            .attr("height", height - margin.top - margin.bottom)
+            .attr("fill", "var(--gradient-color)")
+            .attr("opacity", 0.05)
+            .style("pointer-events", "none");
+
+        const maxY = y.domain()[1];
+
+        // Highlight region for feature_importance > 60% of axis
+        svg.append("rect")
+            .attr("x", margin.left)
+            .attr("y", margin.top)
+            .attr("width", width - margin.left - margin.right)
+            .attr("height", Math.max(0, y(maxY * 0.6) - margin.top))
+            .attr("fill", "var(--gradient-color)")
+            .attr("opacity", 0.05)
+            .style("pointer-events", "none");
+
+        // Highlight region for feature_importance > 80% of axis
+        svg.append("rect")
+            .attr("x", margin.left)
+            .attr("y", margin.top)
+            .attr("width", width - margin.left - margin.right)
+            .attr("height", Math.max(0, y(maxY * 0.8) - margin.top))
+            .attr("fill", "var(--gradient-color)")
+            .attr("opacity", 0.05)
+            .style("pointer-events", "none");
+
         // legende pour la direction
         const minColor = store.minColor;
         const midColor = store.midColor;
@@ -117,6 +158,19 @@
             { offset: "50%", color: midColor },
             { offset: "100%", color: maxColor },
         ];
+
+        // Arrow marker for translation arrows
+        defs.append("marker")
+            .attr("id", "arrow-head-grey")
+            .attr("viewBox", "0 0 10 10")
+            .attr("refX", 8)
+            .attr("refY", 5)
+            .attr("markerWidth", 6)
+            .attr("markerHeight", 6)
+            .attr("orient", "auto-start-reverse")
+            .append("path")
+            .attr("d", "M 0 0 L 10 5 L 0 10 z")
+            .attr("fill", "#ccc");
 
         stops.forEach((s) => {
             gradient
@@ -627,6 +681,10 @@
             .append("g")
             .attr("class", "label-lines-group");
 
+        const translationArrowsGroup = svg
+            .append("g")
+            .attr("class", "translation-arrows-group");
+
         const points = svg
             .append("g")
             .attr("class", "p-group")
@@ -880,6 +938,28 @@
                         : d.deterministic_effect;
                     return `translate(${x(valX)}, ${y(d.feature_importance)})`;
                 });
+
+            // 2. Translation Arrows
+            translationArrowsGroup.selectAll("*").remove();
+
+            if (isExpert) {
+                points.each((d) => {
+                    const classicX = x(d.deterministic_effect);
+                    const expertX = x(d.expert_deterministic_effect);
+                    const py = y(d.feature_importance);
+
+                    translationArrowsGroup
+                        .append("line")
+                        .attr("x2", classicX)
+                        .attr("y2", py)
+                        .attr("x1", expertX)
+                        .attr("y1", py)
+                        .attr("stroke", "#ccc")
+                        .attr("stroke-width", 1.5)
+                        .attr("stroke-dasharray", "4, 2")
+                        .attr("marker-end", "url(#arrow-head-grey)");
+                });
+            }
 
             // 2. Update Arrows Rotation
             points.selectAll("image").each(function (d) {

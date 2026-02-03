@@ -101,13 +101,13 @@
 
     let showShortcuts = $state(false);
     let showAxesInfo = $state(false);
-    let showStudies = $state(false);
+    let showDataset = $state(false);
 
     function toggleShortcuts() {
         showShortcuts = !showShortcuts;
         if (showShortcuts) {
             showAxesInfo = false;
-            showStudies = false;
+            showDataset = false;
         }
     }
 
@@ -115,13 +115,13 @@
         showAxesInfo = !showAxesInfo;
         if (showAxesInfo) {
             showShortcuts = false;
-            showStudies = false;
+            showDataset = false;
         }
     }
 
-    function toggleStudies() {
-        showStudies = !showStudies;
-        if (showStudies) {
+    function toggleDataset() {
+        showDataset = !showDataset;
+        if (showDataset) {
             showShortcuts = false;
             showAxesInfo = false;
         }
@@ -131,11 +131,11 @@
 <svelte:window onkeydown={handleKeyboardShortcuts} />
 
 <div class="toolbar">
-    <!-- Section Case Study -->
+    <!-- Section Dataset -->
     <div class="toolbar-section" style="position: relative;">
         <div class="section-header">
             <img src="/icones/study.svg" alt="" class="section-icon" />
-            <span class="section-title">Case Study</span>
+            <span class="section-title">Dataset</span>
         </div>
         <div class="toolbar-group">
             <button
@@ -148,16 +148,16 @@
             </button>
             <button
                 class="toolbar-btn"
-                onclick={toggleStudies}
-                title="Select Demo Study"
-                class:active={showStudies}
+                onclick={toggleDataset}
+                title="Select Example Dataset"
+                class:active={showDataset}
             >
                 <img src="/icones/table.svg" alt="demos" class="icon" />
-                <span>Demos</span>
+                <span>Examples</span>
             </button>
         </div>
 
-        {#if showStudies}
+        {#if showDataset}
             <div class="dropdown-content">
                 <button
                     class="shortcut-item"
@@ -326,7 +326,7 @@
                     class="mode-label"
                     class:active={!store.expertMode}
                     onclick={() => (store.expertMode = false)}
-                    title="Classic">Classic</span
+                    title="Classic">Monotonic</span
                 >
                 <div
                     class="toggle-switch"
@@ -346,7 +346,7 @@
                     class="mode-label"
                     class:active={store.expertMode}
                     onclick={() => (store.expertMode = true)}
-                    title="Expert">Expert</span
+                    title="Expert">Linear</span
                 >
             </div>
         </div>
@@ -714,7 +714,7 @@
     }
 
     .mode-label {
-        color: #605e5c;
+        color: #999999;
         cursor: pointer;
         transition: color 0.2s;
         text-align: center;
@@ -722,25 +722,14 @@
         top: -1px;
     }
 
-    /* Reserve space for bold text without layout shift */
-    .mode-label::after {
-        display: block;
-        content: attr(title);
-        font-weight: 600;
-        height: 0;
-        overflow: hidden;
-        visibility: hidden;
-    }
-
     .mode-label.active {
         color: #201f1e;
-        font-weight: 600;
     }
 
     .toggle-switch {
         width: 36px;
         height: 20px;
-        background-color: #c8c6c4;
+        background-color: #c5c5c5;
         border-radius: 10px;
         position: relative;
         cursor: pointer;
