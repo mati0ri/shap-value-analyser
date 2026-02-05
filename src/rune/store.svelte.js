@@ -70,7 +70,7 @@ class Store {
     // secondaryColor = "#007FFA";
 
 
-    initialize(data) {
+    initialize(data, name = "Dataset") {
         // Reset state
         this.graph_data = [];
         this.merges = [];
@@ -80,6 +80,7 @@ class Store {
         this.hoveredMatrix = [];
         this.hiddenFeatures = [];
         this.datasetId++;
+        this.datasetName = name;
 
 
         // x normalization

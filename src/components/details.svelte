@@ -104,7 +104,7 @@
 
         // Legend (if 2 features)
         if (secondaryFeature) {
-            const legendHeight = 100;
+            const legendHeight = 150;
             const legendWidth = 10;
             const legendX = width - 40;
             const legendY = (height - legendHeight) / 2;
@@ -144,9 +144,9 @@
             svg.append("text")
                 .attr(
                     "transform",
-                    `rotate(90, ${legendX + 35}, ${legendY + legendHeight / 2})`,
+                    `rotate(90, ${legendX + 25}, ${legendY + legendHeight / 2})`,
                 )
-                .attr("x", legendX + 35)
+                .attr("x", legendX + 25)
                 .attr("y", legendY + legendHeight / 2)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "12px")
@@ -155,14 +155,14 @@
             // Low / High Labels
             svg.append("text")
                 .attr("x", legendX + legendWidth / 2)
-                .attr("y", legendY + legendHeight + 12)
+                .attr("y", legendY + legendHeight + 10)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "10px")
                 .text("Low");
 
             svg.append("text")
                 .attr("x", legendX + legendWidth / 2)
-                .attr("y", legendY - 5)
+                .attr("y", legendY - 3)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "10px")
                 .text("High");

@@ -134,7 +134,7 @@
             if (!res.ok) throw new Error("Failed to load study");
 
             const data = await res.json();
-            store.initialize(data);
+            store.initialize(data, studyName);
         } catch (err) {
             console.error(err);
             alert("Error loading study: " + err.message);

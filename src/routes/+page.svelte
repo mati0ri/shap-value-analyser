@@ -9,7 +9,8 @@
     import { store } from "../rune/store.svelte";
     let { data } = $props();
 
-    store.initialize(data);
+    // Pass the dataset name (currentStudy) to initialize
+    store.initialize(data, data.currentStudy);
 </script>
 
 <div class="container">

@@ -17,7 +17,7 @@
     let width = $state(550);
     let height = $state(650);
     let padding = 10;
-    const rightMargin = 125; // Garder de l'espace a droite pour les boutons
+    const rightMargin = 115; // Garder de l'espace a droite pour les boutons
     let scrollTop = 0;
     const ROW_HEIGHT = 40;
     let marginBottom = 0; // pixel perfect pour alignement avec le bas du graphe
@@ -410,8 +410,16 @@
 
 <div
     class="matrix-wrapper"
-    style="flex: 0 0 20%; height: 100%; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 10px 0 10px; box-sizing: border-box;"
+    style="flex: 0 0 20%; height: 100%; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 0px 0 10px; box-sizing: border-box;"
 >
+    <div style="padding-left: 10px; margin-bottom: 8px;">
+        <span style="font-size: 16px; font-weight: bold; color: black;">
+            {store.datasetName} dataset :
+        </span>
+        <span style="font-size: 15px; font-weight: normal; color: black;">
+            {store.raw_x.length} instances
+        </span>
+    </div>
     <h3
         style="margin: 0 0 10px 0; font-size: 16px; font-weight: bold; padding-left: 10px;"
     >
