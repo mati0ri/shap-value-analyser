@@ -36,6 +36,7 @@ class Store {
 
     // datasets
     x = $state([]);
+    raw_x = $state([]); // Store un-normalized data
     y = [];
     sv = $state([]);
     graph_data = $state([]);
@@ -71,6 +72,7 @@ class Store {
 
         // x normalization
         const x = data.x;
+        this.raw_x = x; // Keep raw data
         const keys = Object.keys(x[0]);
 
         const stats = keys.map(key => {

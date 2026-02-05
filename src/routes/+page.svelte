@@ -2,6 +2,7 @@
     import Header from "../components/header.svelte";
     import MenuBar from "../components/menuBar.svelte";
     import Graph from "../components/graph.svelte";
+    import Details from "../components/details.svelte";
     import Matrix from "../components/matrix.svelte";
 
     import { store } from "../rune/store.svelte";
@@ -16,6 +17,7 @@
 
     <div class="middle">
         <Graph />
+        <Details />
         <Matrix />
     </div>
 </div>

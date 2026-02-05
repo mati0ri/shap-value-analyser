@@ -11,17 +11,16 @@
         renameFeature,
     } from "../functions/create_data";
     import { addButtonColumn } from "../utils/matrix/buttons";
-    import { drawSimpleToMergeLinks } from "../utils/matrix/links";
 
     let container;
 
     let width = $state(550);
     let height = $state(650);
-    let padding = 100;
+    let padding = 10;
     const rightMargin = 125; // Garder de l'espace a droite pour les boutons
     let scrollTop = 0;
     const ROW_HEIGHT = 40;
-    let marginBottom = 55; // pixel perfect pour alignement avec le bas du graphe
+    let marginBottom = 0; // pixel perfect pour alignement avec le bas du graphe
 
     function handleScroll(event) {
         event.preventDefault();
@@ -62,7 +61,6 @@
             .map((d) => d.feature);
 
         const rowLabels = [...simpleFeatures, ...mergeFeatures];
-        const colLabels = [...simpleFeatures];
 
         const n = rowLabels.length;
         const totalContentHeight = n * ROW_HEIGHT;
@@ -84,10 +82,6 @@
         const matrixWidth = width - rightMargin;
 
         // band scales
-        const x = d3
-            .scaleBand()
-            .domain(colLabels)
-            .range([padding, matrixWidth]);
 
         const y = d3
             .scaleBand()
@@ -115,36 +109,6 @@
             .attr("width", width)
             .attr("height", clipHeight);
 
-        // ########## HEADERS (Fixed) ##########
-        const headerGroup = svg.append("g").attr("class", "matrix-headers");
-
-        // Labels colonnes
-        headerGroup
-            .append("g")
-            .attr("transform", `translate(0, ${padding - 8})`)
-            .selectAll("text")
-            .data(colLabels)
-            .join("text")
-            .attr("x", (d) => x(d) + x.bandwidth() / 2)
-            .attr("y", 0)
-            .attr("font-size", "15px")
-            .attr("text-anchor", "start")
-            .attr("transform", (d) => {
-                const xPos = x(d) + x.bandwidth() / 2;
-                return `rotate(-45, ${xPos}, 0)`;
-            })
-            .text((d) => d)
-            .attr("cursor", "pointer")
-            .on("click", (event, d) => {
-                handleFeatureClick(d);
-            })
-            .on("mouseenter", (event, d) => {
-                store.hoveredMatrix = [d];
-            })
-            .on("mouseleave", () => {
-                store.hoveredMatrix = [];
-            });
-
         // ########## SCROLLING BODY ##########
         const scrollBody = svg
             .append("g")
@@ -153,18 +117,13 @@
 
         const contentGroup = scrollBody.append("g");
 
-        // Labels lignes
-        contentGroup
+        // Row Backgrounds (Group for easy selection)
+        const rowGroups = contentGroup
             .append("g")
-            .attr("transform", `translate(${padding - 8}, 0)`)
-            .selectAll("text")
+            .selectAll("g")
             .data(rowLabels)
-            .join("text")
-            .attr("x", 0)
-            .attr("y", (d) => y(d) + y.bandwidth() / 2 + 4)
-            .attr("text-anchor", "end")
-            .attr("font-size", "15px")
-            .text((d) => (d.length > 7 ? d.slice(0, 7) + "..." : d))
+            .join("g")
+            .attr("transform", (d) => `translate(0, ${y(d)})`)
             .attr("cursor", "pointer")
             .on("click", (event, d) => {
                 handleFeatureClick(d);
@@ -175,6 +134,32 @@
             .on("mouseleave", () => {
                 store.hoveredMatrix = [];
             });
+
+        // Selection Background Rect
+        rowGroups
+            .append("rect")
+            .attr("width", matrixWidth)
+            .attr("height", ROW_HEIGHT)
+            .attr("fill", "transparent")
+            .attr("class", "selection-bg");
+
+        // Hover Background Rect
+        rowGroups
+            .append("rect")
+            .attr("width", matrixWidth)
+            .attr("height", ROW_HEIGHT)
+            .attr("fill", "transparent")
+            .attr("class", "hover-bg");
+
+        // Row Labels
+        rowGroups
+            .append("text")
+            .attr("x", 20)
+            .attr("y", ROW_HEIGHT / 2)
+            .attr("dominant-baseline", "middle")
+            .attr("text-anchor", "start")
+            .attr("font-size", "15px")
+            .text((d) => d);
 
         const buttonSize = 30;
 
@@ -238,19 +223,6 @@
             getIcon: "/icones/rename.svg",
         });
 
-        // groupe pour traits verticaux entre simple et merges
-        const simpleToMergeLinksGroup = contentGroup
-            .append("g")
-            .attr("class", "simple-to-merge-links");
-
-        function updateSimpleToMergeLinks() {
-            drawSimpleToMergeLinks(simpleToMergeLinksGroup, data, {
-                xScale: x,
-                yScale: y,
-                strokeColor: store.colorStroke,
-            });
-        }
-
         // ligne de séparation simples / merges
         const separatorY =
             y(simpleFeatures[simpleFeatures.length - 1]) + y.bandwidth();
@@ -264,160 +236,6 @@
             .attr("stroke", store.colorStroke)
             .attr("stroke-width", 1)
             .attr("pointer-events", "none");
-
-        // cellules
-        const cellsData = rowLabels.flatMap((row, r) =>
-            colLabels.map((col, c) => {
-                const isDiagonal = r === c && r < simpleFeatures.length;
-
-                let isMergeChild = false;
-                if (r >= simpleFeatures.length) {
-                    const mergeIndex = r - simpleFeatures.length;
-                    const merge = data.find(
-                        (d) =>
-                            d.isMerge &&
-                            d.feature === mergeFeatures[mergeIndex],
-                    );
-                    if (merge && merge.children.includes(col))
-                        isMergeChild = true;
-                }
-
-                const fullData = data.find((x) => x.feature === row);
-
-                return { row, col, isDiagonal, isMergeChild, fullData };
-            }),
-        );
-
-        // fond 1 ligne sur 2
-        const rowStriping = contentGroup
-            .append("g")
-            .attr("class", "row-striping");
-
-        rowLabels.forEach((feature, index) => {
-            if (index % 2 === 1) {
-                rowStriping
-                    .append("rect")
-                    .attr("x", padding)
-                    .attr("y", y(feature))
-                    .attr("width", matrixWidth - padding)
-                    .attr("height", y.bandwidth())
-                    .attr("fill", "rgba(100,100,100,0.03)")
-                    .attr("pointer-events", "none");
-            }
-        });
-
-        // Layer 1: Highlights (Background)
-        const highlightLayer = contentGroup
-            .append("g")
-            .attr("class", "layer-highlights");
-
-        highlightLayer
-            .selectAll("rect")
-            .data(cellsData)
-            .join("rect")
-            .attr("transform", (d) => `translate(${x(d.col)}, ${y(d.row)})`)
-            .attr("width", x.bandwidth())
-            .attr("height", y.bandwidth())
-            .attr("fill", "rgba(200,200,200,0)")
-            .attr("class", "hover-bg")
-            .attr("pointer-events", "none");
-
-        // Layer 2: Dots & Arrows (Content)
-        const dotsLayer = contentGroup.append("g").attr("class", "layer-dots");
-
-        const interestingCellsData = cellsData.filter(
-            (d) => d.isDiagonal || d.isMergeChild,
-        );
-
-        const interestingCells = dotsLayer
-            .selectAll("g")
-            .data(interestingCellsData)
-            .join("g")
-            .attr("transform", (d) => `translate(${x(d.col)}, ${y(d.row)})`)
-            .attr("data-row", (d) => d.row);
-
-        interestingCells
-            .append("circle")
-            .attr("cx", x.bandwidth() / 2)
-            .attr("cy", y.bandwidth() / 2)
-            .attr("r", y.bandwidth() * 0.24)
-            .attr("stroke", store.colorStroke)
-            .attr("stroke-opacity", 1)
-            .attr("stroke-width", (d) => {
-                const selected = store.selectedFeatures;
-                const f = d.fullData;
-
-                const isSelected =
-                    f &&
-                    (selected.includes(f.feature) ||
-                        (f.isMerge &&
-                            f.children.every((c) => selected.includes(c))));
-
-                return isSelected ? 3 : 1.5;
-            })
-            .attr("class", "gold-point")
-            .attr("fill", "#e0e0e0")
-
-            .attr("stroke", (d) => {
-                const selected = store.selectedFeatures;
-                const f = d.fullData;
-
-                const isSelected =
-                    f &&
-                    (selected.includes(f.feature) ||
-                        (f.isMerge &&
-                            f.children.every((c) => selected.includes(c))));
-
-                return isSelected
-                    ? store.colorSelectedStroke
-                    : store.colorStroke;
-            });
-
-        interestingCells
-            .append("image")
-            .attr("href", "/icones/arrow.svg")
-            .attr("width", y.bandwidth() * 0.4)
-            .attr("height", y.bandwidth() * 0.4)
-            .attr("x", (x.bandwidth() - y.bandwidth() * 0.4) / 2)
-            .attr("y", (y.bandwidth() - y.bandwidth() * 0.4) / 2)
-            .attr("transform", (d) => {
-                const cx = x.bandwidth() / 2;
-                const cy = y.bandwidth() / 2;
-                const dir = d.fullData
-                    ? untrack(() => store.expertMode)
-                        ? d.fullData.expert_direction
-                        : d.fullData.direction
-                    : 0;
-                // dir 1 -> -45deg (UP-RIGHT)
-                // dir -1 -> +45deg (DOWN-RIGHT)
-                let ratio = 0;
-                if (untrack(() => store.expertMode)) {
-                    ratio = -dir / store.maxExpertDirection;
-                    if (ratio > 1) ratio = 1;
-                    if (ratio < -1) ratio = -1;
-                } else {
-                    ratio = -dir;
-                }
-                const angle = ratio * 45;
-                return `rotate(${angle}, ${cx}, ${cy})`;
-            })
-            .attr("pointer-events", "none");
-
-        // Layer 3: Event Catchers (Top)
-        const eventLayer = contentGroup
-            .append("g")
-            .attr("class", "layer-events");
-
-        eventLayer
-            .selectAll("rect")
-            .data(cellsData)
-            .join("rect")
-            .attr("transform", (d) => `translate(${x(d.col)}, ${y(d.row)})`)
-            .attr("class", "event-catcher")
-            .attr("width", x.bandwidth())
-            .attr("height", y.bandwidth())
-            .attr("fill", "transparent")
-            .attr("pointer-events", "all");
 
         function handleFeatureClick(featureName) {
             const selected = store.selectedFeatures;
@@ -442,71 +260,65 @@
             } else {
                 cleanGhost();
             }
-
-            updateSimpleToMergeLinks();
         }
 
-        eventLayer
-            .selectAll(".event-catcher")
-            .on("mouseenter", (event, d) => {
-                store.hoveredMatrix = [d.row];
-            })
-            .on("mouseleave", (event, d) => {
-                store.hoveredMatrix = [];
-            })
-            .on("click", (event, d) => {
-                if (d.fullData) {
-                    handleFeatureClick(d.fullData.feature);
-                }
-            });
-
         function updateHighlights() {
-            const targets = new Set([
-                ...(store.selectedFeatures || []),
+            const selectedFeatures = new Set(store.selectedFeatures || []);
+            const hoveredFeatures = new Set([
                 ...(store.hoveredGraph || []),
                 ...(store.hoveredMatrix || []),
             ]);
 
-            // Backgrounds
-            svg.selectAll(".hover-bg").attr("fill", (d) =>
-                targets.has(d.row)
-                    ? "rgba(199, 30, 255, 0.1)"
-                    : "rgba(200,200,200,0)",
-            );
+            // check si un merge est hovered -> highlight ses enfants
+            if (store.hoveredMatrix.length > 0) {
+                const h = store.hoveredMatrix[0];
+                const fm = data.find((d) => d.feature === h && d.isMerge);
+                if (fm) {
+                    fm.children.forEach((c) => hoveredFeatures.add(c));
+                }
+            }
+            if (store.hoveredGraph.length > 0) {
+                const h = store.hoveredGraph[0];
+                const fm = data.find((d) => d.feature === h && d.isMerge);
+                if (fm) {
+                    fm.children.forEach((c) => hoveredFeatures.add(c));
+                }
+            }
 
-            // Row Labels
-            contentGroup
-                .selectAll("text")
-                .attr("font-weight", (d) =>
-                    targets.has(d) ? "bold" : "normal",
-                )
-                .attr("fill", (d) =>
-                    targets.has(d) ? store.colorSelectedStroke : null,
-                );
-
-            // Column Labels
-            const activeColumns = new Set();
-            targets.forEach((featureName) => {
-                const fd = data.find((x) => x.feature === featureName);
-                if (fd) {
-                    if (fd.isMerge) {
-                        fd.children.forEach((c) => activeColumns.add(c));
-                    } else {
-                        activeColumns.add(fd.feature);
-                    }
-                } else if (colLabels.includes(featureName)) {
-                    // Fallback for simple features not explicitly in data object (if applicable)
-                    activeColumns.add(featureName);
+            // check si un merge est selected -> highlight ses enfants
+            data.filter((d) => d.isMerge).forEach((m) => {
+                if (store.selectedFeatures.includes(m.feature)) {
+                    m.children.forEach((c) => selectedFeatures.add(c));
                 }
             });
 
-            headerGroup
-                .selectAll("text")
-                .attr("font-weight", (d) =>
-                    activeColumns.has(d) ? "bold" : "normal",
-                )
+            // Update Selection Backgrounds
+            contentGroup
+                .selectAll(".selection-bg")
                 .attr("fill", (d) =>
-                    activeColumns.has(d) ? store.colorSelectedStroke : null,
+                    selectedFeatures.has(d)
+                        ? "rgba(199, 30, 255, 0.1)"
+                        : "transparent",
+                );
+
+            // Update Hover Backgrounds
+            contentGroup
+                .selectAll(".hover-bg")
+                .attr("fill", (d) =>
+                    hoveredFeatures.has(d)
+                        ? "rgba(200, 200, 200, 0.2)"
+                        : "transparent",
+                );
+
+            // Update Text Color/Weight if needed (optional based on user request "whole row highlight")
+            // Keeping text black but bold on selection might be nice, or just rely on bg
+            contentGroup
+                .selectAll("text")
+                .attr("font-weight", "normal")
+                .attr("fill", (d) =>
+                    selectedFeatures.has(d)
+                        ? store.colorSelectedStroke
+                        : "black",
                 );
         }
 
@@ -559,37 +371,9 @@
         // Initial update
         updateScroll();
 
-        updateSimpleToMergeLinks();
-
-        function updateMode() {
-            const isExpert = store.expertMode;
-            interestingCells.select("image").each(function (d) {
-                const cx = x.bandwidth() / 2;
-                const cy = y.bandwidth() / 2;
-                const dir = d.fullData
-                    ? isExpert
-                        ? d.fullData.expert_direction
-                        : d.fullData.direction
-                    : 0;
-                let ratio = 0;
-                if (isExpert) {
-                    ratio = -dir / store.maxExpertDirection;
-                    if (ratio > 1) ratio = 1;
-                    if (ratio < -1) ratio = -1;
-                } else {
-                    ratio = -dir;
-                }
-                const angle = ratio * 45;
-                d3.select(this)
-                    .transition()
-                    .duration(1000)
-                    .attr("transform", `rotate(${angle}, ${cx}, ${cy})`);
-            });
-        }
-
         return {
             updateHighlights,
-            updateMode,
+            updateHighlights,
         };
     }
 
@@ -612,19 +396,21 @@
     $effect(() => {
         matrixApi = drawMatrix();
     });
-
-    $effect(() => {
-        store.expertMode;
-        if (matrixApi && matrixApi.updateMode) {
-            matrixApi.updateMode();
-        }
-    });
 </script>
 
 <div
-    bind:this={container}
-    bind:clientWidth={width}
-    bind:clientHeight={height}
-    style="flex: {100 -
-        store.graphWidthPercentage}; height: calc(100% - {marginBottom}px); min-width: 400px; min-height: 400px; overflow: hidden; position: relative;"
-></div>
+    class="matrix-wrapper"
+    style="flex: 0 0 20%; height: 100%; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 10px 0 10px; box-sizing: border-box;"
+>
+    <h3
+        style="margin: 0 0 10px 0; font-size: 16px; font-weight: bold; padding-left: 10px;"
+    >
+        Features
+    </h3>
+    <div
+        bind:this={container}
+        bind:clientWidth={width}
+        bind:clientHeight={height}
+        style="flex: 1; width: 100%; overflow: hidden; position: relative;"
+    ></div>
+</div>
