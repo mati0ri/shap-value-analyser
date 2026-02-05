@@ -4,6 +4,7 @@
     import Graph from "../components/graph.svelte";
     import Details from "../components/details.svelte";
     import Matrix from "../components/matrix.svelte";
+    import Popup from "../components/Popup.svelte";
 
     import { store } from "../rune/store.svelte";
     let { data } = $props();
@@ -20,6 +21,13 @@
         <Details />
         <Matrix />
     </div>
+
+    {#if store.isUploadPopupOpen}
+        <Popup>
+            <h2>Upload Dataset</h2>
+            <p>Upload functionality coming soon...</p>
+        </Popup>
+    {/if}
 </div>
 
 <style>

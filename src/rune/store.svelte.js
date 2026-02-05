@@ -13,6 +13,8 @@ class Store {
     graphWidthPercentage = $state(50);
     isLassoActive = $state(false);
     expertMode = $state(false);
+    isUploadPopupOpen = $state(false);
+    datasetId = $state(0);
 
     isSelectedNew = $derived.by(() => {
         const selected = this.selectedFeatures;
@@ -69,6 +71,16 @@ class Store {
 
 
     initialize(data) {
+        // Reset state
+        this.graph_data = [];
+        this.merges = [];
+        this.selectedFeatures = [];
+        this.clickedFeature = null;
+        this.hoveredGraph = [];
+        this.hoveredMatrix = [];
+        this.hiddenFeatures = [];
+        this.datasetId++;
+
 
         // x normalization
         const x = data.x;

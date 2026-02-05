@@ -15,30 +15,13 @@ function csvToArray(csv) {
     });
 }
 
-export function load({ url }) {
-    const studyParam = url.searchParams.get('study');
-
-    const validStudies = [
-        "Bio-allFeatures-withoutHumanFootprints",
-        "Bio10",
-        "Bio100-10",
-        "Titanic",
-        "Test",
-        "California",
-        "Turnover"
-    ];
-
-    let currentStudy = "Bio-allFeatures-withoutHumanFootprints"; // Default
-
-    if (studyParam && validStudies.includes(studyParam)) {
-        currentStudy = studyParam;
-    }
-
+export function load() {
+    const currentStudy = "Titanic";
     const base = path.join(process.cwd(), 'src/data', currentStudy);
 
     const x = csvToArray(fs.readFileSync(path.join(base, 'x.csv'), 'utf-8'));
     const y = csvToArray(fs.readFileSync(path.join(base, 'y.csv'), 'utf-8'));
     const sv = csvToArray(fs.readFileSync(path.join(base, 'sv.csv'), 'utf-8'));
 
-    return { x, y, sv, currentStudy, validStudies };
+    return { x, y, sv, currentStudy };
 }

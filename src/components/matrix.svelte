@@ -396,6 +396,16 @@
     $effect(() => {
         matrixApi = drawMatrix();
     });
+
+    $effect(() => {
+        // Monitor dataset changes to reset scroll
+        // access it to track dependency
+        const _ = store.datasetId;
+        untrack(() => {
+            scrollTop = 0;
+            updateScroll();
+        });
+    });
 </script>
 
 <div

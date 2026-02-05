@@ -126,6 +126,20 @@
             showAxesInfo = false;
         }
     }
+
+    async function loadStudy(studyName) {
+        showDataset = false;
+        try {
+            const res = await fetch(`/api/study?study=${studyName}`);
+            if (!res.ok) throw new Error("Failed to load study");
+
+            const data = await res.json();
+            store.initialize(data);
+        } catch (err) {
+            console.error(err);
+            alert("Error loading study: " + err.message);
+        }
+    }
 </script>
 
 <svelte:window onkeydown={handleKeyboardShortcuts} />
@@ -140,8 +154,8 @@
         <div class="toolbar-group">
             <button
                 class="toolbar-btn"
-                onclick={uploadStudy}
-                title="Not implemented yet"
+                onclick={() => (store.isUploadPopupOpen = true)}
+                title="Upload Dataset"
             >
                 <img src="/icones/upload.svg" alt="import" class="icon" />
                 <span>Upload</span>
@@ -163,8 +177,7 @@
                     class="shortcut-item"
                     style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
                     onclick={() =>
-                        (window.location.href =
-                            "?study=Bio-allFeatures-withoutHumanFootprints")}
+                        loadStudy("Bio-allFeatures-withoutHumanFootprints")}
                 >
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Bio</span>
@@ -172,7 +185,7 @@
                 <button
                     class="shortcut-item"
                     style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
-                    onclick={() => (window.location.href = "?study=Titanic")}
+                    onclick={() => loadStudy("Titanic")}
                 >
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Titanic</span>
@@ -180,7 +193,7 @@
                 <button
                     class="shortcut-item"
                     style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
-                    onclick={() => (window.location.href = "?study=Bio10")}
+                    onclick={() => loadStudy("Bio10")}
                 >
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Bio10</span>
@@ -188,7 +201,7 @@
                 <button
                     class="shortcut-item"
                     style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
-                    onclick={() => (window.location.href = "?study=Bio100-10")}
+                    onclick={() => loadStudy("Bio100-10")}
                 >
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Bio100-10</span>
@@ -196,7 +209,7 @@
                 <button
                     class="shortcut-item"
                     style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
-                    onclick={() => (window.location.href = "?study=Test")}
+                    onclick={() => loadStudy("Test")}
                 >
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Test</span>
@@ -204,7 +217,7 @@
                 <button
                     class="shortcut-item"
                     style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
-                    onclick={() => (window.location.href = "?study=California")}
+                    onclick={() => loadStudy("California")}
                 >
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">California</span>
@@ -212,7 +225,7 @@
                 <button
                     class="shortcut-item"
                     style="width: 100%; text-align:left; background:none; border:none; cursor:pointer;"
-                    onclick={() => (window.location.href = "?study=Turnover")}
+                    onclick={() => loadStudy("Turnover")}
                 >
                     <img src="/icones/file.svg" alt="demo" class="icon" />
                     <span class="desc">Turnover</span>
