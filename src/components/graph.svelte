@@ -63,7 +63,9 @@
         const y = d3
             .scaleLinear()
             .range([height - margin.bottom, margin.top])
-            .domain([0, d3.max(data, (d) => d.feature_importance)])
+            .domain([0, store.maxShap || 1]) // Use maxShap from store
+            // .domain([0, d3.max(data, (d) => d.feature_importance)])
+
             .nice(); // pour arrondir la val max
 
         // dessiner les axes

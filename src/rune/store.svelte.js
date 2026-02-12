@@ -17,6 +17,7 @@ class Store {
     expertMode = $state(false);
     isUploadPopupOpen = $state(false);
     datasetId = $state(0);
+    maxShap = $state(0);
 
     isSelectedNew = $derived.by(() => {
         const selected = this.selectedFeatures;
@@ -116,6 +117,21 @@ class Store {
 
         // sv 
         this.sv = data.sv;
+
+        // Calculate total SHAP for each instance and find max absolute total
+        let maxTotal = 0;
+        this.sv.forEach(row => {
+            let total = 0;
+            Object.values(row).forEach(val => {
+                const num = parseFloat(val);
+                if (!isNaN(num)) {
+                    total += num;
+                }
+            });
+            row.total = total;
+            maxTotal = Math.max(maxTotal, Math.abs(total));
+        });
+        this.maxShap = maxTotal;
 
         // others
         this.allFeatures = keys;
