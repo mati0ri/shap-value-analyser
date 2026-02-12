@@ -93,20 +93,20 @@
             .attr("font-size", 18)
             .text("Feature importance");
 
-        // Highlight region for deterministic_effect > 0.6
+        // Highlight region for deterministic_effect > 0.5
         svg.append("rect")
-            .attr("x", x(0.6))
+            .attr("x", x(0.5))
             .attr("y", margin.top)
-            .attr("width", x(1) - x(0.6))
+            .attr("width", x(1) - x(0.5))
             .attr("height", height - margin.top - margin.bottom)
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
 
         svg.append("rect")
-            .attr("x", x(0.8))
+            .attr("x", x(0.75))
             .attr("y", margin.top)
-            .attr("width", x(1) - x(0.8))
+            .attr("width", x(1) - x(0.75))
             .attr("height", height - margin.top - margin.bottom)
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
@@ -114,22 +114,22 @@
 
         const maxY = y.domain()[1];
 
-        // Highlight region for feature_importance > 60% of axis
+        // Highlight region for feature_importance > 50% of axis
         svg.append("rect")
             .attr("x", margin.left)
             .attr("y", margin.top)
             .attr("width", width - margin.left - margin.right)
-            .attr("height", Math.max(0, y(maxY * 0.6) - margin.top))
+            .attr("height", Math.max(0, y(maxY * 0.5) - margin.top))
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
 
-        // Highlight region for feature_importance > 80% of axis
+        // Highlight region for feature_importance > 75% of axis
         svg.append("rect")
             .attr("x", margin.left)
             .attr("y", margin.top)
             .attr("width", width - margin.left - margin.right)
-            .attr("height", Math.max(0, y(maxY * 0.8) - margin.top))
+            .attr("height", Math.max(0, y(maxY * 0.75) - margin.top))
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");

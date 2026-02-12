@@ -5,6 +5,8 @@ class Store {
     selectedFeatures = $state([]);
     merges = $state([]);
     clickedFeature = $state(null);
+    draggedFeature1 = $state(null); // X-axis feature
+    draggedFeature2 = $state(null); // Color feature
     hoveredGraph = $state([]);
     hoveredMatrix = $state([]);
     hideLabels = $state(false);

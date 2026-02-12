@@ -6,17 +6,18 @@
     let container;
     let width = $state(0);
     let height = $state(0);
-    const margin = { top: 20, right: 80, bottom: 40, left: 50 }; // Reverted right margin for legend
+    const margin = { top: 20, right: 80, bottom: 40, left: 50 };
 
     let isSwapped = $state(false);
 
     let canvas;
 
     let showPlaceholder = $derived(
-        !store.selectedFeatures ||
-            (store.selectedFeatures.length !== 1 &&
-                store.selectedFeatures.length !== 2),
+        !store.draggedFeature1 && !store.draggedFeature2,
     );
+    // Helper to determine feature usage based on drag state
+    let primaryFeature = $derived(store.draggedFeature1);
+    let secondaryFeature = $derived(store.draggedFeature2);
 
     function drawDetails() {
         console.time("drawDetails");
@@ -29,7 +30,10 @@
         const wrapper = d3.select(container);
         wrapper.selectAll("svg").remove();
 
-        if (showPlaceholder) {
+        // If no primary feature (X-axis), we can't draw the graph.
+        // Even if only Y-axis is dragged, we usually need X to plot.
+        // Let's assume X is required.
+        if (!primaryFeature) {
             if (canvas) {
                 const ctx = canvas.getContext("2d");
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -45,23 +49,7 @@
             .style("position", "absolute")
             .style("top", "0")
             .style("left", "0")
-            .style("pointer-events", "none"); // Let events pass through if needed, though we said no interaction
-
-        const selected = store.selectedFeatures;
-        let primaryFeature, secondaryFeature;
-
-        if (selected.length === 1) {
-            primaryFeature = selected[0];
-        } else {
-            // length === 2
-            if (isSwapped) {
-                primaryFeature = selected[1];
-                secondaryFeature = selected[0];
-            } else {
-                primaryFeature = selected[0];
-                secondaryFeature = selected[1];
-            }
-        }
+            .style("pointer-events", "none");
 
         // Prepare data
         console.time("prepareData");
@@ -121,7 +109,8 @@
             .attr("y", height - 5)
             .attr("text-anchor", "middle")
             .attr("font-size", "12px")
-            .text(`${primaryFeature}`);
+            .text(`${primaryFeature}`)
+            .style("font-weight", "bold");
 
         svg.append("text")
             .attr("transform", "rotate(-90)")
@@ -129,7 +118,8 @@
             .attr("y", 15)
             .attr("text-anchor", "middle")
             .attr("font-size", "12px")
-            .text(`SHAP Value (${primaryFeature})`);
+            .text(`SHAP Value (${primaryFeature})`)
+            .style("font-weight", "bold");
         console.timeEnd("axes");
 
         let colorBinData = [];
@@ -183,7 +173,8 @@
                 .attr("y", legendY + legendHeight / 2)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "12px")
-                .text(`${secondaryFeature}`);
+                .text(`${secondaryFeature}`)
+                .style("font-weight", "bold");
 
             // Low / High Labels
             svg.append("text")
@@ -321,15 +312,109 @@
     }
 
     $effect(() => {
-        store.selectedFeatures;
+        store.draggedFeature1;
+        store.draggedFeature2;
         store.raw_x;
         store.sv;
         store.x;
-        isSwapped;
+        // isSwapped;
         width;
         height;
         canvas; // Dependency
         drawDetails();
+    });
+
+    // Drag Listeners
+    // Drag Listeners
+    function handleDragOver(e) {
+        e.preventDefault();
+        // Allow copy to support dragging from list (which is copy-only) and axis (which is move/copy)
+        e.dataTransfer.dropEffect = "copy";
+    }
+
+    function handleDragStartAxis(e, axis, featureName) {
+        if (!featureName) {
+            e.preventDefault();
+            return;
+        }
+        e.dataTransfer.setData("text/plain", featureName);
+        e.dataTransfer.setData("application/visu-axis", axis);
+        // Allow moving (for swap/delete) but also copy to be compatible with drop zone expecting copy
+        e.dataTransfer.effectAllowed = "copyMove";
+
+        // Custom drag image (Label) - Reusing logic from List if possible or duplicating
+        const dragIcon = document.createElement("div");
+        dragIcon.innerText = featureName;
+        dragIcon.style.position = "absolute";
+        dragIcon.style.top = "-1000px";
+        dragIcon.style.background = "white";
+        dragIcon.style.padding = "5px";
+        dragIcon.style.border = "1px solid #ccc";
+        dragIcon.style.borderRadius = "4px";
+        dragIcon.style.fontWeight = "bold";
+        dragIcon.style.zIndex = "1000";
+        document.body.appendChild(dragIcon);
+
+        e.dataTransfer.setDragImage(dragIcon, 0, 0);
+        setTimeout(() => document.body.removeChild(dragIcon), 0);
+    }
+
+    function handleDragEndAxis(e, axis) {
+        // If dropEffect is 'none', it means it wasn't dropped in a valid dropzone (like the other axis).
+        // Treat this as "dropped elsewhere" -> delete/remove.
+        if (e.dataTransfer.dropEffect === "none") {
+            if (axis === "x") store.draggedFeature1 = null;
+            if (axis === "y") store.draggedFeature2 = null;
+        }
+    }
+
+    function handleDropX(e) {
+        e.preventDefault();
+        const sourceAxis = e.dataTransfer.getData("application/visu-axis");
+        const feature = e.dataTransfer.getData("text/plain");
+
+        if (!feature) return;
+
+        if (sourceAxis === "y") {
+            // Swap or Move Y to X
+            // If X has something, Dragged Y becomes X, Old X becomes Y (Swap)
+            // If X is empty, Y becomes X, Y becomes empty (Move)
+            const oldX = store.draggedFeature1;
+            store.draggedFeature1 = feature;
+            store.draggedFeature2 = oldX;
+        } else if (sourceAxis === "x") {
+            // Dropped on self, do nothing
+        } else {
+            // From List (or elsewhere)
+            store.draggedFeature1 = feature;
+        }
+    }
+
+    function handleDropY(e) {
+        e.preventDefault();
+        const sourceAxis = e.dataTransfer.getData("application/visu-axis");
+        const feature = e.dataTransfer.getData("text/plain");
+
+        if (!feature) return;
+
+        if (sourceAxis === "x") {
+            // Swap or Move X to Y
+            const oldY = store.draggedFeature2;
+            store.draggedFeature2 = feature;
+            store.draggedFeature1 = oldY;
+        } else if (sourceAxis === "y") {
+            // Dropped on self
+        } else {
+            store.draggedFeature2 = feature;
+        }
+    }
+
+    // Special Case: Shift Y to X if X is empty
+    $effect(() => {
+        if (!store.draggedFeature1 && store.draggedFeature2) {
+            store.draggedFeature1 = store.draggedFeature2;
+            store.draggedFeature2 = null;
+        }
     });
 </script>
 
@@ -346,15 +431,53 @@
         style="position: absolute; top: 0; left: 0; pointer-events: none;"
     ></canvas>
 
-    {#if store.selectedFeatures && store.selectedFeatures.length === 2}
-        <button class="switch-btn" onclick={() => (isSwapped = !isSwapped)}>
-            Switch Axis
-        </button>
+    <!-- Drop Zones -->
+    <!-- X-Axis Drop Zone (Bottom) -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <div
+        class="drop-zone x-axis-drop"
+        role="region"
+        aria-label="X Axis Drop Zone"
+        draggable={!!store.draggedFeature1}
+        ondragstart={(e) => handleDragStartAxis(e, "x", store.draggedFeature1)}
+        ondragend={(e) => handleDragEndAxis(e, "x")}
+        ondragover={handleDragOver}
+        ondrop={handleDropX}
+        style="cursor: {store.draggedFeature1 ? 'grab' : 'default'};"
+    >
+        {#if !store.draggedFeature1}
+            <span>Drag X-Axis Feature Here</span>
+        {:else}
+            <span class="rotate-text">{store.draggedFeature1}</span>
+        {/if}
+    </div>
+
+    <!-- Y-Axis Drop Zone (Left/Side) -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    {#if store.draggedFeature1}
+        <div
+            class="drop-zone y-axis-drop"
+            role="region"
+            aria-label="Y Axis Drop Zone"
+            draggable={!!store.draggedFeature2}
+            ondragstart={(e) =>
+                handleDragStartAxis(e, "y", store.draggedFeature2)}
+            ondragend={(e) => handleDragEndAxis(e, "y")}
+            ondragover={handleDragOver}
+            ondrop={handleDropY}
+            style="cursor: {store.draggedFeature2 ? 'grab' : 'default'};"
+        >
+            {#if !store.draggedFeature2}
+                <span>Drag Color Feature Here</span>
+            {:else}
+                <span class="rotate-text">{store.draggedFeature2}</span>
+            {/if}
+        </div>
     {/if}
 
     {#if showPlaceholder}
         <p class="placeholder-text">
-            select at least one feature to display details.
+            Drag a feature from the list to the X-axis box below to start.
         </p>
     {/if}
 </div>
@@ -379,22 +502,81 @@
         text-align: center;
         pointer-events: none;
         user-select: none;
+        max-width: 80%;
     }
 
-    .switch-btn {
+    .drop-zone {
         position: absolute;
-        top: 10px;
-        right: 10px;
-        z-index: 10;
-        padding: 5px 10px;
-        background: white;
-        border: 1px solid #ccc;
+        background: rgba(255, 255, 255, 0.8);
+        border: 2px dashed #ccc;
         border-radius: 4px;
-        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
         font-size: 12px;
+        color: #666;
+        transition:
+            background 0.2s,
+            border-color 0.2s;
+        z-index: 100;
+        pointer-events: all;
     }
 
-    .switch-btn:hover {
-        background: #f0f0f0;
+    .drop-zone:hover {
+        background: rgba(240, 240, 240, 0.9);
+        border-color: #999;
+    }
+
+    .x-axis-drop {
+        bottom: 5px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 60%;
+        height: 30px;
+    }
+
+    .y-axis-drop {
+        right: 5px; /* right side for consistency with previous legend pos? User said "on the left (y axis)" but color legend was on right. Let's put on right for now as it maps to color/secondary feature usually */
+        /* Wait, user said "boxes underneath (if x axis) or on the left (y axis)" 
+            But dragging to Y usually means Feature 1 vs Feature 2 plot. 
+            However, here Feature 2 is COLOR. 
+            User said "If a feature is already dragged on the x axis, allow dragging on the y axis. It then displays ... coloration for second feature's value."
+            Usually color legend is on the right. 
+            The USER explicitly said "on the left (y axis)". Let's stick to their words for "Y axis" meaning. But `secondaryFeature` was `colorVal`. 
+            The graph plots SHAP vs Feature Value. 
+            Maybe user wants a 2D partial dependence style? 
+            "If a feature is already dragged on the x axis, allow dragging on the y axis. It then displays the graph we had when two features were selected" -> That was Scatter plot of Feature1 vs SHAP(Feature1) coloured by Feature2.
+            So Y-axis of the plot is SHAP. 
+            The drop zone for "draggedFeature 2" corresponds to COLOR. 
+            I will put it on the RIGHT similar to the legend, but if user specifically requested LEFT I should be careful. 
+            "boxes ... on the left (y axis)". 
+            Let's interpret "left (y axis)" as the vertical axis of the chart which is SHAP value. But we are coloring by Feature 2. 
+            Actually, let's place it on the RIGHT side since that's where the legend for the second feature (color) appears. Placing it on the left might confuse with the primary Y axis which is SHAP value. 
+            Wait, user said: "only 2 axis with boxes underneath (if x axis) or on the left (y axis)."
+            This implies user views Feature 2 as "Y axis" in their mental model, even if it's color. 
+            Or maybe they want to drop onto the Y-axis area to define the Y-axis variable? 
+            "It then displays the graph we had when two features were selected" -> That graph is X=Feature1, Y=SHAP(Feature1), Color=Feature2.
+            So Feature 2 is NOT on the Y axis. Feature 2 is the COLOR.
+            I'll put the drop zone for Feature 2 on the RIGHT where the legend is, to match the visual connection to color. 
+            I'll add a comment if I deviate. 
+            Actually, "on the left (y axis)" is quite specific. I will put it on the left but maybe label it "Color / Interaction". 
+            Let's try putting it on the right to match the visual output (Legend). 
+            If I put it on the left, it overlays the SHAP axis. 
+            I'll put it on the RIGHT and see. The user said "draggedFeature 2 ... allow drag and drop ... on the left (y axis)"
+            Maybe I should follow instructions precisely? 
+            "boxes underneath (if x axis) or on the left (y axis)."
+            Okay, I will put it on the LEFT side of the container. Vertical.
+         */
+        top: 50%;
+        left: 5px; /* User requested Left */
+        transform: translateY(-50%);
+        width: 30px;
+        height: 60%;
+        writing-mode: vertical-lr; /* Vertical text */
+    }
+
+    .rotate-text {
+        /* writing-mode handles rotation, but ensure orientation is good */
+        text-orientation: mixed;
     }
 </style>
