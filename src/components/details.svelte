@@ -1,13 +1,16 @@
 <script>
     import * as d3 from "d3";
     import { store } from "../rune/store.svelte";
+    import { untrack } from "svelte";
 
     let container;
     let width = $state(0);
     let height = $state(0);
-    const margin = { top: 20, right: 80, bottom: 40, left: 50 }; // Increased right margin for legend
+    const margin = { top: 20, right: 80, bottom: 40, left: 50 }; // Reverted right margin for legend
 
     let isSwapped = $state(false);
+
+    let canvas;
 
     let showPlaceholder = $derived(
         !store.selectedFeatures ||
@@ -16,12 +19,24 @@
     );
 
     function drawDetails() {
-        if (!container || !width || !height) return;
+        console.time("drawDetails");
+        if (!container || !width || !height) {
+            console.timeEnd("drawDetails");
+            return;
+        }
 
+        // SVG for axes and legends
         const wrapper = d3.select(container);
         wrapper.selectAll("svg").remove();
 
-        if (showPlaceholder) return;
+        if (showPlaceholder) {
+            if (canvas) {
+                const ctx = canvas.getContext("2d");
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            console.timeEnd("drawDetails");
+            return;
+        }
 
         const svg = wrapper
             .append("svg")
@@ -29,7 +44,8 @@
             .attr("height", height)
             .style("position", "absolute")
             .style("top", "0")
-            .style("left", "0");
+            .style("left", "0")
+            .style("pointer-events", "none"); // Let events pass through if needed, though we said no interaction
 
         const selected = store.selectedFeatures;
         let primaryFeature, secondaryFeature;
@@ -48,13 +64,24 @@
         }
 
         // Prepare data
-        const plotData = store.raw_x.map((d, i) => ({
-            x: +d[primaryFeature],
-            y: store.sv[i][`shap_${primaryFeature}`],
-            colorVal: secondaryFeature ? store.x[i][secondaryFeature] : null,
-        }));
+        console.time("prepareData");
+
+        const shapKey = `shap_${primaryFeature}`;
+
+        const plotData = untrack(() => {
+            return store.raw_x.map((d, i) => ({
+                x: +d[primaryFeature],
+                y: store.sv[i][shapKey],
+                colorVal: secondaryFeature
+                    ? store.x[i][secondaryFeature]
+                    : null,
+            }));
+        });
+
+        console.timeEnd("prepareData");
 
         // Scales
+        console.time("scales");
         const xExtent = d3.extent(plotData, (d) => d.x);
         const xScale = d3
             .scaleLinear()
@@ -67,6 +94,7 @@
             .scaleLinear()
             .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
             .range([height - margin.bottom, margin.top]);
+        console.timeEnd("scales");
 
         // Color Scale
         let colorScale;
@@ -78,6 +106,7 @@
         }
 
         // Axes
+        console.time("axes");
         svg.append("g")
             .attr("transform", `translate(0,${height - margin.bottom})`)
             .call(d3.axisBottom(xScale).ticks(5));
@@ -101,13 +130,17 @@
             .attr("text-anchor", "middle")
             .attr("font-size", "12px")
             .text(`SHAP Value (${primaryFeature})`);
+        console.timeEnd("axes");
+
+        let colorBinData = [];
+        let legendY = 0;
+        let legendHeight = 300; // Increased height (2x wider in y direction)
+        let legendX = width - 40; // Reverted X position
 
         // Legend (if 2 features)
         if (secondaryFeature) {
-            const legendHeight = 150;
-            const legendWidth = 10;
-            const legendX = width - 40;
-            const legendY = (height - legendHeight) / 2;
+            legendY = (height - legendHeight) / 2;
+            const legendWidth = 10; // Reverted width
 
             const defs = svg.append("defs");
             const linearGradient = defs
@@ -166,27 +199,136 @@
                 .attr("text-anchor", "middle")
                 .attr("font-size", "10px")
                 .text("High");
+
+            // Prepare Color Histogram Data
+            const colorHistogram = d3
+                .bin()
+                .value((d) => d.colorVal)
+                .domain([0, 1])
+                .thresholds(10);
+
+            colorBinData = colorHistogram(plotData);
         }
 
-        // Points
-        svg.append("g")
-            .selectAll("circle")
-            .data(plotData)
-            .join("circle")
-            .attr("cx", (d) => xScale(d.x))
-            .attr("cy", (d) => yScale(d.y))
-            .attr("r", 3)
-            .attr("fill", (d) =>
-                secondaryFeature ? colorScale(d.colorVal) : "green",
-            )
-            .attr("opacity", secondaryFeature ? 1 : 0.4);
+        // Histograms & Points (Canvas)
+        console.time("points");
+
+        if (canvas) {
+            const ctx = canvas.getContext("2d");
+            const dpr = window.devicePixelRatio || 1;
+
+            // Set canvas size accounting for DPI
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = `${width}px`;
+            canvas.style.height = `${height}px`;
+
+            ctx.scale(dpr, dpr);
+            ctx.clearRect(0, 0, width, height);
+
+            // --- 1. X-Axis Histogram (Background) ---
+            const xHistogram = d3
+                .bin()
+                .value((d) => d.x)
+                .domain(xScale.domain())
+                .thresholds(10);
+
+            const xBins = xHistogram(plotData);
+            const xMax = d3.max(xBins, (d) => d.length);
+
+            // Height of histogram: 20% of chart height or fixed px? using 20%
+            const histHeight = (height - margin.bottom - margin.top) * 0.2;
+            const yHistScale = d3
+                .scaleLinear()
+                .domain([0, xMax])
+                .range([0, histHeight]);
+
+            ctx.fillStyle = "#e0e0e0"; // Light grey
+
+            xBins.forEach((bin) => {
+                if (bin.length === 0) return;
+                const x0 = xScale(bin.x0);
+                const x1 = xScale(bin.x1);
+                const barWidth = Math.max(0, x1 - x0 - 1); // -1 for gap
+                const barHeight = yHistScale(bin.length);
+
+                // Draw from bottom up
+                ctx.fillRect(
+                    x0,
+                    height - margin.bottom - barHeight,
+                    barWidth,
+                    barHeight,
+                );
+            });
+
+            // --- 2. Color-Axis Histogram (Background) ---
+            if (secondaryFeature && colorBinData.length > 0) {
+                const cMax = d3.max(colorBinData, (d) => d.length);
+                const histWidth = 30; // Reverted histogram width
+
+                // We map [0,1] to [legendY + legendHeight, legendY]
+                // 0 is at Bottom (legendY + legendHeight), 1 is at Top (legendY)
+                const yColorScale = d3
+                    .scaleLinear()
+                    .domain([0, 1])
+                    .range([legendY + legendHeight, legendY]);
+
+                const xColorScale = d3
+                    .scaleLinear()
+                    .domain([0, cMax])
+                    .range([0, histWidth]);
+
+                colorBinData.forEach((bin) => {
+                    if (bin.length === 0) return;
+                    // bin.x0 is min val, bin.x1 is max val of bin
+                    // Y position:
+                    const y0 = yColorScale(bin.x0);
+                    const y1 = yColorScale(bin.x1);
+                    // Since y scale is inverted (larger value = smaller y), y1 < y0.
+                    // rect y should be y1, height y0 - y1
+                    const barHeight = Math.max(0, y0 - y1 - 1);
+                    const barWidth = xColorScale(bin.length);
+
+                    // Align to the left of legendX (legendX - 5 gap - barWidth)
+                    ctx.fillRect(
+                        legendX - 5 - barWidth,
+                        y1,
+                        barWidth,
+                        barHeight,
+                    );
+                });
+            }
+
+            const TWO_PI = Math.PI * 2;
+
+            // Draw points
+            for (let i = 0; i < plotData.length; i++) {
+                const d = plotData[i];
+                ctx.beginPath();
+                ctx.arc(xScale(d.x), yScale(d.y), 3, 0, TWO_PI);
+                ctx.fillStyle = secondaryFeature
+                    ? colorScale(d.colorVal)
+                    : "green";
+                // Only opacity if no secondary feature, or always? Original had opacity 1 or 0.4
+                ctx.globalAlpha = secondaryFeature ? 1 : 0.4;
+                ctx.fill();
+            }
+            // Reset globalAlpha
+            ctx.globalAlpha = 1;
+        }
+        console.timeEnd("points");
+        console.timeEnd("drawDetails");
     }
 
     $effect(() => {
         store.selectedFeatures;
+        store.raw_x;
+        store.sv;
+        store.x;
         isSwapped;
         width;
         height;
+        canvas; // Dependency
         drawDetails();
     });
 </script>
@@ -198,6 +340,12 @@
     bind:clientWidth={width}
     bind:clientHeight={height}
 >
+    <!-- Canvas for points -->
+    <canvas
+        bind:this={canvas}
+        style="position: absolute; top: 0; left: 0; pointer-events: none;"
+    ></canvas>
+
     {#if store.selectedFeatures && store.selectedFeatures.length === 2}
         <button class="switch-btn" onclick={() => (isSwapped = !isSwapped)}>
             Switch Axis

@@ -3,7 +3,7 @@
     import MenuBar from "../components/menuBar.svelte";
     import Graph from "../components/graph.svelte";
     import Details from "../components/details.svelte";
-    import Matrix from "../components/matrix.svelte";
+    import List from "../components/list.svelte";
     import Popup from "../components/Popup.svelte";
 
     import { store } from "../rune/store.svelte";
@@ -18,9 +18,9 @@
     <MenuBar />
 
     <div class="middle">
+        <List />
         <Graph />
         <Details />
-        <Matrix />
     </div>
 
     {#if store.isUploadPopupOpen}

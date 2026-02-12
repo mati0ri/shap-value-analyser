@@ -43,7 +43,6 @@ function AUC(effect, feature) {
     }
 
     const res = total > 0 ? count / total : 1.0;
-    // return 2 * Math.abs(res - 0.5)
     return res;
 }
 

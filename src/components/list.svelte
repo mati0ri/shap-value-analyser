@@ -237,6 +237,20 @@
             .attr("stroke-width", 1)
             .attr("pointer-events", "none");
 
+        if (mergeFeatures.length === 0) {
+            contentGroup
+                .append("text")
+                .attr("x", 20)
+                .attr("y", separatorY + ROW_HEIGHT / 2)
+                .attr("dominant-baseline", "middle")
+                .attr("text-anchor", "start")
+                .attr("font-size", "14px")
+                .attr("fill", "grey")
+                .attr("font-style", "italic")
+                .attr("class", "static-text")
+                .text("merged features will appear here");
+        }
+
         function handleFeatureClick(featureName) {
             const selected = store.selectedFeatures;
             const f = data.find((x) => x.feature === featureName);
@@ -313,7 +327,7 @@
             // Update Text Color/Weight if needed (optional based on user request "whole row highlight")
             // Keeping text black but bold on selection might be nice, or just rely on bg
             contentGroup
-                .selectAll("text")
+                .selectAll("text:not(.static-text)")
                 .attr("font-weight", "normal")
                 .attr("fill", (d) =>
                     selectedFeatures.has(d)
@@ -410,9 +424,9 @@
 
 <div
     class="matrix-wrapper"
-    style="flex: 0 0 20%; height: 100%; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 0px 0 10px; box-sizing: border-box;"
+    style="flex: 0 0 20%; height: 100%; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 0px 0 0px; box-sizing: border-box;"
 >
-    <div style="padding-left: 10px; margin-bottom: 8px;">
+    <div style="margin-bottom: 8px;">
         <span style="font-size: 16px; font-weight: bold; color: black;">
             {store.datasetName} dataset :
         </span>
@@ -420,9 +434,7 @@
             {store.raw_x.length} instances
         </span>
     </div>
-    <h3
-        style="margin: 0 0 10px 0; font-size: 16px; font-weight: bold; padding-left: 10px;"
-    >
+    <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: bold;">
         Features
     </h3>
     <div
