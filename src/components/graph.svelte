@@ -758,6 +758,90 @@
         points.each(function (d) {
             const g = d3.select(this);
 
+            // D3 Drag Behavior
+            const dragBehavior = d3
+                .drag()
+                .on("start", (event) => {
+                    const featureName = d.isMerge ? d.feature : d.feature;
+
+                    // Create visual helper
+                    const helper = document.createElement("div");
+                    helper.id = "drag-helper";
+                    helper.innerText = featureName;
+                    helper.style.position = "fixed";
+                    helper.style.background = "white";
+                    helper.style.padding = "5px";
+                    helper.style.border = "1px solid #ccc";
+                    helper.style.borderRadius = "4px";
+                    helper.style.fontWeight = "bold";
+                    helper.style.zIndex = "9999";
+                    helper.style.pointerEvents = "none"; // Crucial so elementFromPoint sees what's under
+                    helper.style.left = event.sourceEvent.clientX + "px";
+                    helper.style.top = event.sourceEvent.clientY + "px";
+                    document.body.appendChild(helper);
+
+                    g.style("cursor", "grabbing");
+                    document.body.style.cursor = "grabbing"; // Global cursor for better UX
+                })
+                .on("drag", (event) => {
+                    const helper = document.getElementById("drag-helper");
+                    if (helper) {
+                        helper.style.left =
+                            event.sourceEvent.clientX + 10 + "px";
+                        helper.style.top =
+                            event.sourceEvent.clientY + 10 + "px";
+                    }
+
+                    // Visual feedback for drop zones
+                    const x = event.sourceEvent.clientX;
+                    const y = event.sourceEvent.clientY;
+                    const target = document.elementFromPoint(x, y);
+
+                    if (
+                        target &&
+                        (target.closest(".x-axis-drop") ||
+                            target.closest(".y-axis-drop"))
+                    ) {
+                        g.style("cursor", "copy");
+                        document.body.style.cursor = "copy";
+                        if (helper) helper.style.border = "2px solid #4CAF50"; // Green border as extra hint
+                    } else {
+                        g.style("cursor", "grabbing");
+                        document.body.style.cursor = "grabbing";
+                        if (helper) helper.style.border = "1px solid #ccc";
+                    }
+                })
+                .on("end", (event) => {
+                    const helper = document.getElementById("drag-helper");
+                    if (helper) {
+                        document.body.removeChild(helper);
+                    }
+                    // Reset cursor on the group element
+                    g.style("cursor", "grab");
+                    // Also ensure body cursor is reset just in case
+                    document.body.style.cursor = "default";
+
+                    // Find drop target
+                    const x = event.sourceEvent.clientX;
+                    const y = event.sourceEvent.clientY;
+                    const target = document.elementFromPoint(x, y);
+
+                    if (target) {
+                        const xAxisDrop = target.closest(".x-axis-drop");
+                        const yAxisDrop = target.closest(".y-axis-drop");
+                        const featureName = d.isMerge ? d.feature : d.feature;
+
+                        if (xAxisDrop) {
+                            store.draggedFeature1 = featureName;
+                        } else if (yAxisDrop) {
+                            store.draggedFeature2 = featureName;
+                        }
+                    }
+                });
+
+            // Apply drag behavior
+            g.style("cursor", "grab").call(dragBehavior);
+
             if (d.isGhost) {
                 if (store.isSelectedNew) {
                     g.append("path")

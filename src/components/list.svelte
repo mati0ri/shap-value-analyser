@@ -65,26 +65,66 @@
     // Drag Handlers
     function handleDragStart(event, featureName) {
         event.dataTransfer.setData("text/plain", featureName);
+        event.dataTransfer.setData("application/visu-axis", "list"); // Mark source as list
         event.dataTransfer.effectAllowed = "copy";
 
-        // Custom drag image if desired, or let browser handle it.
-        // The user previously asked for a label following cursor.
-        // Browser default for dragging an element usually shows a ghost of the element.
-        // To show JUST the text label as requested:
-        const dragIcon = document.createElement("div");
-        dragIcon.innerText = featureName;
-        dragIcon.style.position = "absolute";
-        dragIcon.style.top = "-1000px";
-        dragIcon.style.background = "white";
-        dragIcon.style.padding = "5px";
-        dragIcon.style.border = "1px solid #ccc";
-        dragIcon.style.borderRadius = "4px";
-        dragIcon.style.fontWeight = "bold";
-        document.body.appendChild(dragIcon);
+        // Create custom helper for visual feedback
+        const helper = document.createElement("div");
+        helper.id = "list-drag-helper";
+        helper.innerText = featureName;
+        helper.style.position = "fixed";
+        helper.style.background = "white";
+        helper.style.padding = "5px";
+        helper.style.border = "1px solid #ccc";
+        helper.style.borderRadius = "4px";
+        helper.style.fontWeight = "bold";
+        helper.style.zIndex = "9999";
+        helper.style.pointerEvents = "none";
+        // Initial position
+        helper.style.left = event.clientX + "px";
+        helper.style.top = event.clientY + "px";
+        document.body.appendChild(helper);
 
-        event.dataTransfer.setDragImage(dragIcon, 0, 0);
+        // Hide default ghost
+        const emptyImg = new Image();
+        emptyImg.src =
+            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+        event.dataTransfer.setDragImage(emptyImg, 0, 0);
 
-        setTimeout(() => document.body.removeChild(dragIcon), 0);
+        // We can't set cursor on the element itself during drag easily with native DnD
+        // because the browser controls it, but we can try setting body cursor or rely on drop zones.
+    }
+
+    function handleDrag(event) {
+        if (event.clientX === 0 && event.clientY === 0) return; // Ignore invalid end events
+
+        const helper = document.getElementById("list-drag-helper");
+        if (helper) {
+            helper.style.left = event.clientX + 10 + "px";
+            helper.style.top = event.clientY + 10 + "px";
+
+            // Visual feedback
+            const target = document.elementFromPoint(
+                event.clientX,
+                event.clientY,
+            );
+            if (
+                target &&
+                (target.closest(".x-axis-drop") ||
+                    target.closest(".y-axis-drop"))
+            ) {
+                helper.style.border = "2px solid #4CAF50"; // Green border
+            } else {
+                helper.style.border = "1px solid #ccc";
+            }
+        }
+    }
+
+    function handleDragEnd(event) {
+        const helper = document.getElementById("list-drag-helper");
+        if (helper) {
+            document.body.removeChild(helper);
+        }
     }
 
     function handleMouseEnter(featureName) {
@@ -129,6 +169,8 @@
                     store.hoveredGraph.includes(item.feature)}
                 draggable="true"
                 ondragstart={(e) => handleDragStart(e, item.feature)}
+                ondrag={(e) => handleDrag(e)}
+                ondragend={(e) => handleDragEnd(e)}
                 onclick={() => handleFeatureClick(item.feature)}
                 onmouseenter={() => handleMouseEnter(item.feature)}
                 onmouseleave={handleMouseLeave}
