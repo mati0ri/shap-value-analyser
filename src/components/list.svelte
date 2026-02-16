@@ -1,19 +1,40 @@
 <script>
+    import * as d3 from "d3";
     import { store } from "../rune/store.svelte";
-    import { untrack } from "svelte";
-    import { deleteMerge, renameMerge } from "../functions/create_data";
+    import { onMount, untrack } from "svelte";
+    import { deleteMerge } from "../functions/create_data";
+    import { renameMerge } from "../functions/create_data";
     import {
         create_data,
         cleanGhost,
         deleteFeature,
         renameFeature,
     } from "../functions/create_data";
+    import { addButtonColumn } from "../utils/matrix/buttons";
 
     let container;
 
-    // Remove D3 width/height logic, rely on CSS flex
-    // let width = $state(550);
-    // let height = $state(650);
+    let width = $state(550);
+    let height = $state(650);
+    let padding = 10;
+    const rightMargin = 115; // Garder de l'espace a droite pour les boutons
+    let scrollTop = 0;
+    const ROW_HEIGHT = 40;
+    let marginBottom = 0; // pixel perfect pour alignement avec le bas du graphe
+
+    function handleScroll(event) {
+        event.preventDefault();
+        const maxScroll = Math.max(
+            0,
+            store.graph_data.filter((d) => !d.isGhost).length * ROW_HEIGHT -
+                (height - padding),
+        );
+        scrollTop = Math.max(0, Math.min(maxScroll, scrollTop + event.deltaY));
+        updateScroll();
+    }
+
+    // Use a variable to hold the update function for reactivity
+    let updateScroll = () => {};
 
     function toggleHidden(feature) {
         const hidden = store.hiddenFeatures;
@@ -28,439 +49,454 @@
 
     const data = $derived.by(() => store.graph_data.filter((d) => !d.isGhost));
 
-    // Split data into simple and merge features for ordered rendering if needed
-    // The original logic sorted: simple features then merge features.
-    // Let's preserve that order.
-    const simpleFeatures = $derived(data.filter((d) => !d.isMerge));
-    const mergeFeatures = $derived(data.filter((d) => d.isMerge));
+    function drawMatrix() {
+        if (!data) return;
 
-    // Combine them to iterate easily or iterate separately to insert the separator
-    // Actually, iterating separately allows easier insertion of the separator line.
+        // tri simple vs merge
+        const simpleFeatures = data
+            .filter((d) => !d.isMerge)
+            .map((d) => d.feature);
+        const mergeFeatures = data
+            .filter((d) => d.isMerge)
+            .map((d) => d.feature);
 
-    function handleFeatureClick(featureName) {
-        const selected = store.selectedFeatures;
-        const f = data.find((x) => x.feature === featureName);
+        const rowLabels = [...simpleFeatures, ...mergeFeatures];
 
-        if (!f) {
-            const i = selected.indexOf(featureName);
-            i === -1 ? selected.push(featureName) : selected.splice(i, 1);
-        } else {
-            if (f.isMerge) {
-                f.children.forEach((child) => {
-                    if (!selected.includes(child)) selected.push(child);
-                });
+        const n = rowLabels.length;
+        const totalContentHeight = n * ROW_HEIGHT;
+
+        d3.select(container).selectAll("*").remove();
+
+        // Ajout du listener de scroll sur le container
+        d3.select(container).on("wheel", handleScroll);
+
+        const svg = d3
+            .select(container)
+            .append("svg")
+            .attr("width", width)
+            .attr("height", height)
+            .style("position", "absolute")
+            .style("top", "0")
+            .style("left", "0");
+
+        const matrixWidth = width - rightMargin;
+
+        // band scales
+
+        const y = d3
+            .scaleBand()
+            .domain(rowLabels)
+            .range([0, totalContentHeight]);
+
+        // color scale
+        const minColor = "#007FFA";
+        const midColor = "#FFFFFF";
+        const maxColor = "#FF0047";
+
+        const colorScale = d3
+            .scaleLinear()
+            .domain([-1, 0, 1])
+            .range([minColor, midColor, maxColor]);
+
+        // la zone de scrolling
+        const clipHeight = Math.max(0, height - padding);
+        svg.append("defs")
+            .append("clipPath")
+            .attr("id", "matrix-scroll-clip")
+            .append("rect")
+            .attr("x", 0)
+            .attr("y", padding)
+            .attr("width", width)
+            .attr("height", clipHeight);
+
+        // ########## SCROLLING BODY ##########
+        const scrollBody = svg
+            .append("g")
+            .attr("class", "matrix-body")
+            .attr("clip-path", "url(#matrix-scroll-clip)");
+
+        const contentGroup = scrollBody.append("g");
+
+        // Row Backgrounds (Group for easy selection)
+        const rowGroups = contentGroup
+            .append("g")
+            .selectAll("g")
+            .data(rowLabels)
+            .join("g")
+            .attr("transform", (d) => `translate(0, ${y(d)})`)
+            .attr("cursor", "pointer")
+            .on("click", (event, d) => {
+                handleFeatureClick(d);
+            })
+            .on("mouseenter", (event, d) => {
+                store.hoveredMatrix = [d];
+            })
+            .on("mouseleave", () => {
+                store.hoveredMatrix = [];
+            });
+
+        // Selection Background Rect
+        rowGroups
+            .append("rect")
+            .attr("width", matrixWidth)
+            .attr("height", ROW_HEIGHT)
+            .attr("fill", "transparent")
+            .attr("class", "selection-bg");
+
+        // Hover Background Rect
+        rowGroups
+            .append("rect")
+            .attr("width", matrixWidth)
+            .attr("height", ROW_HEIGHT)
+            .attr("fill", "transparent")
+            .attr("class", "hover-bg");
+
+        // Row Labels
+        rowGroups
+            .append("text")
+            .attr("x", 20)
+            .attr("y", ROW_HEIGHT / 2)
+            .attr("dominant-baseline", "middle")
+            .attr("text-anchor", "start")
+            .attr("font-size", "15px")
+            .text((d) => d);
+
+        // Drag Behavior
+        rowGroups.call(
+            d3
+                .drag()
+                .on("start", (event, d) => {
+                    store.draggingFeature = d;
+                    // Create a ghost element appended to body to escape overflow:hidden
+                    const ghost = d3
+                        .select("body")
+                        .append("div")
+                        .attr("class", "drag-ghost")
+                        .style("position", "absolute")
+                        .style("left", event.sourceEvent.pageX + "px")
+                        .style("top", event.sourceEvent.pageY + "px")
+                        .style("padding", "5px 10px")
+                        .style("background", "white")
+                        .style("border", "1px solid #ccc")
+                        .style("border-radius", "4px")
+                        .style("box-shadow", "0 2px 5px rgba(0,0,0,0.2)")
+                        .style("pointer-events", "none") // Important for elementFromPoint
+                        .style("z-index", 1000)
+                        .text(d);
+                })
+                .on("drag", (event) => {
+                    d3.select(".drag-ghost")
+                        .style("left", event.sourceEvent.pageX + "px")
+                        .style("top", event.sourceEvent.pageY + "px");
+                })
+                .on("end", (event, d) => {
+                    store.draggingFeature = null;
+                    d3.select(".drag-ghost").remove();
+
+                    // Check drop
+                    const dropTarget = document.elementFromPoint(
+                        event.sourceEvent.pageX,
+                        event.sourceEvent.pageY,
+                    );
+
+                    if (dropTarget) {
+                        const dropZone = dropTarget.closest(".drop-zone");
+                        if (dropZone) {
+                            const zoneType =
+                                dropZone.getAttribute("data-zone-type");
+                            if (zoneType === "x") {
+                                store.draggedFeatureX = d;
+                                // If we start fresh x-axis, reset color axis?
+                                // User said: "If a feature is already dragged on the x axis, allow dragging on the y axis"
+                                // So we keep it flexible.
+                            } else if (zoneType === "color") {
+                                store.draggedFeatureY = d;
+                            }
+                        }
+                    }
+                }),
+        );
+
+        const buttonSize = 30;
+
+        // Boutons hide / show
+        addButtonColumn(contentGroup, rowLabels, {
+            x: matrixWidth + 10,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => {
+                toggleHidden(feature);
+                drawMatrix();
+            },
+            getIcon: (d) =>
+                store.hiddenFeatures.includes(d)
+                    ? "/icones/eye-closed.svg"
+                    : "/icones/eye-open.svg",
+            getFill: (d) =>
+                store.hiddenFeatures.includes(d)
+                    ? "#b8b8b8"
+                    : "var(--light-grey)",
+        });
+
+        // Boutons delete pour features simples
+        addButtonColumn(contentGroup, simpleFeatures, {
+            x: matrixWidth + 45,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => deleteFeature(feature),
+            getIcon: "/icones/delete.svg",
+        });
+
+        // Boutons rename pour features simples
+        addButtonColumn(contentGroup, simpleFeatures, {
+            x: matrixWidth + 80,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => renameFeature(feature),
+            getIcon: "/icones/rename.svg",
+        });
+
+        // Boutons delete pour merges
+        addButtonColumn(contentGroup, mergeFeatures, {
+            x: matrixWidth + 45,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => deleteMerge(feature),
+            getIcon: "/icones/delete.svg",
+        });
+
+        // Boutons rename pour merges
+        addButtonColumn(contentGroup, mergeFeatures, {
+            x: matrixWidth + 80,
+            y,
+            rowHeight: ROW_HEIGHT,
+            buttonSize,
+            onClick: (event, feature) => renameMerge(feature),
+            getIcon: "/icones/rename.svg",
+        });
+
+        // ligne de séparation simples / merges
+        const separatorY =
+            y(simpleFeatures[simpleFeatures.length - 1]) + y.bandwidth();
+
+        contentGroup
+            .append("line")
+            .attr("x1", padding - 150)
+            .attr("x2", matrixWidth + 140)
+            .attr("y1", separatorY)
+            .attr("y2", separatorY)
+            .attr("stroke", store.colorStroke)
+            .attr("stroke-width", 1)
+            .attr("pointer-events", "none");
+
+        if (mergeFeatures.length === 0) {
+            contentGroup
+                .append("text")
+                .attr("x", 20)
+                .attr("y", separatorY + ROW_HEIGHT / 2)
+                .attr("dominant-baseline", "middle")
+                .attr("text-anchor", "start")
+                .attr("font-size", "14px")
+                .attr("fill", "grey")
+                .attr("font-style", "italic")
+                .attr("class", "static-text")
+                .text("merged features will appear here");
+        }
+
+        function handleFeatureClick(featureName) {
+            const selected = store.selectedFeatures;
+            const f = data.find((x) => x.feature === featureName);
+
+            if (!f) {
+                const i = selected.indexOf(featureName);
+                i === -1 ? selected.push(featureName) : selected.splice(i, 1);
             } else {
-                const i = selected.indexOf(f.feature);
-                i === -1 ? selected.push(f.feature) : selected.splice(i, 1);
+                if (f.isMerge) {
+                    f.children.forEach((child) => {
+                        if (!selected.includes(child)) selected.push(child);
+                    });
+                } else {
+                    const i = selected.indexOf(f.feature);
+                    i === -1 ? selected.push(f.feature) : selected.splice(i, 1);
+                }
+            }
+
+            if (selected.length >= 2) {
+                create_data([selected], true);
+            } else {
+                cleanGhost();
             }
         }
 
-        if (selected.length >= 2) {
-            create_data([selected], true);
-        } else {
-            cleanGhost();
+        function updateHighlights() {
+            const selectedFeatures = new Set(store.selectedFeatures || []);
+            const hoveredFeatures = new Set([
+                ...(store.hoveredGraph || []),
+                ...(store.hoveredMatrix || []),
+            ]);
+
+            // check si un merge est hovered -> highlight ses enfants
+            if (store.hoveredMatrix.length > 0) {
+                const h = store.hoveredMatrix[0];
+                const fm = data.find((d) => d.feature === h && d.isMerge);
+                if (fm) {
+                    fm.children.forEach((c) => hoveredFeatures.add(c));
+                }
+            }
+            if (store.hoveredGraph.length > 0) {
+                const h = store.hoveredGraph[0];
+                const fm = data.find((d) => d.feature === h && d.isMerge);
+                if (fm) {
+                    fm.children.forEach((c) => hoveredFeatures.add(c));
+                }
+            }
+
+            // check si un merge est selected -> highlight ses enfants
+            data.filter((d) => d.isMerge).forEach((m) => {
+                if (store.selectedFeatures.includes(m.feature)) {
+                    m.children.forEach((c) => selectedFeatures.add(c));
+                }
+            });
+
+            // Update Selection Backgrounds
+            contentGroup
+                .selectAll(".selection-bg")
+                .attr("fill", (d) =>
+                    selectedFeatures.has(d)
+                        ? "rgba(199, 30, 255, 0.1)"
+                        : "transparent",
+                );
+
+            // Update Hover Backgrounds
+            contentGroup
+                .selectAll(".hover-bg")
+                .attr("fill", (d) =>
+                    hoveredFeatures.has(d)
+                        ? "rgba(200, 200, 200, 0.2)"
+                        : "transparent",
+                );
+
+            // Update Text Color/Weight if needed (optional based on user request "whole row highlight")
+            // Keeping text black but bold on selection might be nice, or just rely on bg
+            contentGroup
+                .selectAll("text:not(.static-text)")
+                .attr("font-weight", "normal")
+                .attr("fill", (d) =>
+                    selectedFeatures.has(d)
+                        ? store.colorSelectedStroke
+                        : "black",
+                );
         }
-    }
 
-    // Drag Handlers
-    function handleDragStart(event, featureName) {
-        event.dataTransfer.setData("text/plain", featureName);
-        event.dataTransfer.setData("application/visu-axis", "list"); // Mark source as list
-        event.dataTransfer.effectAllowed = "copy";
-
-        // Create custom helper for visual feedback
-        const helper = document.createElement("div");
-        helper.id = "list-drag-helper";
-        helper.innerText = featureName;
-        helper.style.position = "fixed";
-        helper.style.background = "white";
-        helper.style.padding = "5px";
-        helper.style.border = "1px solid #ccc";
-        helper.style.borderRadius = "4px";
-        helper.style.fontWeight = "bold";
-        helper.style.zIndex = "9999";
-        helper.style.pointerEvents = "none";
-        // Initial position
-        helper.style.left = event.clientX + "px";
-        helper.style.top = event.clientY + "px";
-        document.body.appendChild(helper);
-
-        // Hide default ghost
-        const emptyImg = new Image();
-        emptyImg.src =
-            "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
-        event.dataTransfer.setDragImage(emptyImg, 0, 0);
-
-        // We can't set cursor on the element itself during drag easily with native DnD
-        // because the browser controls it, but we can try setting body cursor or rely on drop zones.
-    }
-
-    function handleDrag(event) {
-        if (event.clientX === 0 && event.clientY === 0) return; // Ignore invalid end events
-
-        const helper = document.getElementById("list-drag-helper");
-        if (helper) {
-            helper.style.left = event.clientX + 10 + "px";
-            helper.style.top = event.clientY + 10 + "px";
-
-            // Visual feedback
-            const target = document.elementFromPoint(
-                event.clientX,
-                event.clientY,
+        function updateScrollLogic() {
+            // Apply transform to content group
+            contentGroup.attr(
+                "transform",
+                `translate(0, ${padding - scrollTop})`,
             );
-            if (
-                target &&
-                (target.closest(".x-axis-drop") ||
-                    target.closest(".y-axis-drop"))
-            ) {
-                helper.style.border = "2px solid #4CAF50"; // Green border
+
+            // Update Scrollbar Thumb
+            const visibleRatio = clipHeight / totalContentHeight;
+            if (visibleRatio >= 1) {
+                scrollTrack.style("display", "none");
+                scrollThumb.style("display", "none");
             } else {
-                helper.style.border = "1px solid #ccc";
+                scrollTrack.style("display", "block");
+                scrollThumb.style("display", "block");
+                const thumbHeight = Math.max(20, clipHeight * visibleRatio);
+                const scrollRange = totalContentHeight - clipHeight;
+                const scrollRatio =
+                    scrollRange > 0 ? scrollTop / scrollRange : 0;
+                // thumb travel range
+                const trackEffectiveHeight = clipHeight - thumbHeight;
+                const thumbY = padding + scrollRatio * trackEffectiveHeight;
+
+                scrollThumb.attr("y", thumbY).attr("height", thumbHeight);
             }
         }
+        updateScroll = updateScrollLogic;
+
+        // Add Scrollbar
+        const scrollBarWidth = 6;
+        const scrollTrack = svg
+            .append("rect")
+            .attr("x", width - 10)
+            .attr("y", padding)
+            .attr("width", scrollBarWidth)
+            .attr("height", clipHeight)
+            .attr("fill", "#f0f0f0")
+            .attr("rx", 3);
+
+        const scrollThumb = svg
+            .append("rect")
+            .attr("x", width - 10)
+            .attr("width", scrollBarWidth)
+            .attr("fill", "#ccc")
+            .attr("rx", 3);
+
+        // Initial update
+        updateScroll();
+
+        return {
+            updateHighlights,
+            updateHighlights,
+        };
     }
 
-    function handleDragEnd(event) {
-        const helper = document.getElementById("list-drag-helper");
-        if (helper) {
-            document.body.removeChild(helper);
-        }
-    }
+    let matrixApi = null;
 
-    function handleMouseEnter(featureName) {
-        store.hoveredMatrix = [featureName];
-    }
+    onMount(() => {
+        matrixApi = drawMatrix();
+    });
 
-    function handleMouseLeave() {
-        store.hoveredMatrix = [];
-    }
-
-    // Reset scroll position when dataset changes
     $effect(() => {
-        const _ = store.datasetId; // Dependency to trigger effect
+        if (!matrixApi) return;
+        const _deps = [
+            store.hoveredGraph,
+            store.selectedFeatures,
+            store.hoveredMatrix,
+        ];
+        matrixApi.updateHighlights();
+    });
+
+    $effect(() => {
+        matrixApi = drawMatrix();
+    });
+
+    $effect(() => {
+        // Monitor dataset changes to reset scroll
+        // access it to track dependency
+        const _ = store.datasetId;
         untrack(() => {
-            if (container) {
-                container.scrollTop = 0;
-            }
+            scrollTop = 0;
+            updateScroll();
         });
     });
 </script>
 
-<div class="matrix-wrapper">
-    <div class="header-info">
-        <span class="dataset-name">
+<div
+    class="matrix-wrapper"
+    style="flex: 0 0 20%; height: 100%; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 0px 0 0px; box-sizing: border-box;"
+>
+    <div style="margin-bottom: 8px;">
+        <span style="font-size: 16px; font-weight: bold; color: black;">
             {store.datasetName} dataset :
         </span>
-        <span class="instance-count">
+        <span style="font-size: 15px; font-weight: normal; color: black;">
             {store.raw_x.length} instances
         </span>
     </div>
-    <h3 class="features-title">Features</h3>
-
-    <div class="list-container" bind:this={container}>
-        <!-- Simple Features -->
-        {#each simpleFeatures as item (item.feature)}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-                class="list-row"
-                class:selected={store.selectedFeatures.includes(item.feature)}
-                class:hovered={store.hoveredMatrix.includes(item.feature) ||
-                    store.hoveredGraph.includes(item.feature)}
-                draggable="true"
-                ondragstart={(e) => handleDragStart(e, item.feature)}
-                ondrag={(e) => handleDrag(e)}
-                ondragend={(e) => handleDragEnd(e)}
-                onclick={() => handleFeatureClick(item.feature)}
-                onmouseenter={() => handleMouseEnter(item.feature)}
-                onmouseleave={handleMouseLeave}
-            >
-                <div class="row-bg"></div>
-                <span class="feature-name">{item.feature}</span>
-
-                <div class="button-group">
-                    <!-- Hide/Show -->
-                    <button
-                        class="icon-btn"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            toggleHidden(item.feature);
-                        }}
-                        title={store.hiddenFeatures.includes(item.feature)
-                            ? "Show"
-                            : "Hide"}
-                    >
-                        <img
-                            src={store.hiddenFeatures.includes(item.feature)
-                                ? "/icones/eye-closed.svg"
-                                : "/icones/eye-open.svg"}
-                            alt="visibility"
-                            style="opacity: {store.hiddenFeatures.includes(
-                                item.feature,
-                            )
-                                ? 0.5
-                                : 1}"
-                        />
-                    </button>
-
-                    <!-- Delete -->
-                    <button
-                        class="icon-btn"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            deleteFeature(item.feature);
-                        }}
-                        title="Delete"
-                    >
-                        <img src="/icones/delete.svg" alt="delete" />
-                    </button>
-
-                    <!-- Rename -->
-                    <button
-                        class="icon-btn"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            renameFeature(item.feature);
-                        }}
-                        title="Rename"
-                    >
-                        <img src="/icones/rename.svg" alt="rename" />
-                    </button>
-                </div>
-            </div>
-        {/each}
-
-        <!-- Separator -->
-        <div class="separator-container">
-            <div class="separator-line"></div>
-            {#if mergeFeatures.length === 0}
-                <span class="separator-text"
-                    >merged features will appear here</span
-                >
-            {/if}
-        </div>
-
-        <!-- Merge Features -->
-        {#each mergeFeatures as item (item.feature)}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-                class="list-row"
-                class:selected={item.children.every((c) =>
-                    store.selectedFeatures.includes(c),
-                )}
-                class:hovered={store.hoveredMatrix.includes(item.feature) ||
-                    store.hoveredGraph.includes(item.feature)}
-                draggable="true"
-                ondragstart={(e) => handleDragStart(e, item.feature)}
-                onclick={() => handleFeatureClick(item.feature)}
-                onmouseenter={() => handleMouseEnter(item.feature)}
-                onmouseleave={handleMouseLeave}
-            >
-                <div class="row-bg"></div>
-                <span class="feature-name">{item.feature}</span>
-
-                <div class="button-group">
-                    <!-- Hide/Show -->
-                    <button
-                        class="icon-btn"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            toggleHidden(item.feature);
-                        }}
-                        title={store.hiddenFeatures.includes(item.feature)
-                            ? "Show"
-                            : "Hide"}
-                    >
-                        <img
-                            src={store.hiddenFeatures.includes(item.feature)
-                                ? "/icones/eye-closed.svg"
-                                : "/icones/eye-open.svg"}
-                            alt="visibility"
-                            style="opacity: {store.hiddenFeatures.includes(
-                                item.feature,
-                            )
-                                ? 0.5
-                                : 1}"
-                        />
-                    </button>
-
-                    <!-- Delete Merge -->
-                    <button
-                        class="icon-btn"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            deleteMerge(item.feature);
-                        }}
-                        title="Delete Merge"
-                    >
-                        <img src="/icones/delete.svg" alt="delete" />
-                    </button>
-
-                    <!-- Rename Merge -->
-                    <button
-                        class="icon-btn"
-                        onclick={(e) => {
-                            e.stopPropagation();
-                            renameMerge(item.feature);
-                        }}
-                        title="Rename Merge"
-                    >
-                        <img src="/icones/rename.svg" alt="rename" />
-                    </button>
-                </div>
-            </div>
-        {/each}
-    </div>
+    <h3 style="margin: 0 0 10px 0; font-size: 16px; font-weight: bold;">
+        Features
+    </h3>
+    <div
+        bind:this={container}
+        bind:clientWidth={width}
+        bind:clientHeight={height}
+        style="flex: 1; width: 100%; overflow: hidden; position: relative;"
+    ></div>
 </div>
-
-<style>
-    .matrix-wrapper {
-        flex: 0 0 20%;
-        height: 100%;
-        min-width: 200px;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden;
-        padding: 10px 0px 0 0px;
-        box-sizing: border-box;
-    }
-
-    .header-info {
-        margin-bottom: 8px;
-    }
-
-    .dataset-name {
-        font-size: 16px;
-        font-weight: bold;
-        color: black;
-    }
-
-    .instance-count {
-        font-size: 15px;
-        font-weight: normal;
-        color: black;
-    }
-
-    .features-title {
-        margin: 0 0 10px 0;
-        font-size: 16px;
-        font-weight: bold;
-    }
-
-    .list-container {
-        flex: 1;
-        width: 100%;
-        overflow-y: auto;
-        overflow-x: hidden;
-        position: relative;
-    }
-
-    .list-row {
-        height: 40px;
-        display: flex;
-        align-items: center;
-        padding-left: 20px; /* Indent text */
-        cursor: grab;
-        position: relative;
-        user-select: none;
-        -webkit-user-select: none;
-    }
-
-    .list-row:active {
-        cursor: grabbing;
-    }
-
-    /* Backgrounds */
-    .row-bg {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        z-index: -1;
-        transition: background-color 0.1s;
-    }
-
-    .list-row.selected .row-bg {
-        background-color: rgba(199, 30, 255, 0.1);
-    }
-
-    .list-row.hovered .row-bg {
-        background-color: rgba(200, 200, 200, 0.2);
-    }
-
-    /* Text */
-    .feature-name {
-        font-size: 15px;
-        color: black;
-        flex: 1;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        pointer-events: none; /* Let clicks pass through to row */
-    }
-
-    .list-row.selected .feature-name {
-        color: #d451fc; /* store.colorSelectedStroke */
-        /* font-weight: bold; */
-    }
-
-    /* Buttons */
-    .button-group {
-        display: flex;
-        align-items: center;
-        margin-right: 15px;
-    }
-
-    .icon-btn {
-        background: transparent; /* Light grey or transparent */
-        border: none;
-        width: 30px;
-        height: 30px;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        cursor: pointer;
-        padding: 0;
-        margin-left: 5px;
-    }
-
-    .icon-btn:hover {
-        background-color: #d1d1d1;
-    }
-
-    .icon-btn img {
-        width: 20px;
-        height: 20px;
-        pointer-events: none;
-    }
-
-    /* Separator */
-    .separator-container {
-        position: relative;
-        height: 40px;
-        display: flex;
-        align-items: center;
-        padding: 0 20px;
-    }
-
-    .separator-line {
-        position: absolute;
-        left: 0; /* padding - 150 logic from before? Just full width is cleaner */
-        right: 0;
-        top: 50%;
-        height: 1px;
-        background-color: #a1a1a1; /* store.colorStroke */
-        z-index: -1;
-    }
-
-    .separator-text {
-        background: var(--background-color, white); /* Cover line behind text */
-        padding-right: 10px;
-        font-size: 14px;
-        color: grey;
-        font-style: italic;
-    }
-</style>

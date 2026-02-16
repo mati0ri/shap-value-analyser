@@ -63,9 +63,7 @@
         const y = d3
             .scaleLinear()
             .range([height - margin.bottom, margin.top])
-            .domain([0, store.maxShap || 1]) // Use maxShap from store
-            // .domain([0, d3.max(data, (d) => d.feature_importance)])
-
+            .domain([0, d3.max(data, (d) => d.feature_importance)])
             .nice(); // pour arrondir la val max
 
         // dessiner les axes
@@ -95,20 +93,20 @@
             .attr("font-size", 18)
             .text("Feature importance");
 
-        // Highlight region for deterministic_effect > 0.5
+        // Highlight region for deterministic_effect > 0.6
         svg.append("rect")
-            .attr("x", x(0.5))
+            .attr("x", x(0.6))
             .attr("y", margin.top)
-            .attr("width", x(1) - x(0.5))
+            .attr("width", x(1) - x(0.6))
             .attr("height", height - margin.top - margin.bottom)
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
 
         svg.append("rect")
-            .attr("x", x(0.75))
+            .attr("x", x(0.8))
             .attr("y", margin.top)
-            .attr("width", x(1) - x(0.75))
+            .attr("width", x(1) - x(0.8))
             .attr("height", height - margin.top - margin.bottom)
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
@@ -116,22 +114,22 @@
 
         const maxY = y.domain()[1];
 
-        // Highlight region for feature_importance > 50% of axis
+        // Highlight region for feature_importance > 60% of axis
         svg.append("rect")
             .attr("x", margin.left)
             .attr("y", margin.top)
             .attr("width", width - margin.left - margin.right)
-            .attr("height", Math.max(0, y(maxY * 0.5) - margin.top))
+            .attr("height", Math.max(0, y(maxY * 0.6) - margin.top))
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
 
-        // Highlight region for feature_importance > 75% of axis
+        // Highlight region for feature_importance > 80% of axis
         svg.append("rect")
             .attr("x", margin.left)
             .attr("y", margin.top)
             .attr("width", width - margin.left - margin.right)
-            .attr("height", Math.max(0, y(maxY * 0.75) - margin.top))
+            .attr("height", Math.max(0, y(maxY * 0.8) - margin.top))
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
@@ -729,7 +727,60 @@
             .on("mouseleave", () => {
                 store.hoveredGraph = [];
                 cleanHoverCircle();
-            });
+            })
+            .call(
+                d3
+                    .drag()
+                    .on("start", (event, d) => {
+                        if (d.isGhost) return;
+                        store.draggingFeature = d.feature;
+                        // Create a ghost element appended to body to escape overflow:hidden
+                        const ghost = d3
+                            .select("body")
+                            .append("div")
+                            .attr("class", "drag-ghost")
+                            .style("position", "absolute")
+                            .style("left", event.sourceEvent.pageX + "px")
+                            .style("top", event.sourceEvent.pageY + "px")
+                            .style("padding", "5px 10px")
+                            .style("background", "white")
+                            .style("border", "1px solid #ccc")
+                            .style("border-radius", "4px")
+                            .style("box-shadow", "0 2px 5px rgba(0,0,0,0.2)")
+                            .style("pointer-events", "none") // Important for elementFromPoint
+                            .style("z-index", 1000)
+                            .text(d.feature);
+                    })
+                    .on("drag", (event) => {
+                        d3.select(".drag-ghost")
+                            .style("left", event.sourceEvent.pageX + "px")
+                            .style("top", event.sourceEvent.pageY + "px");
+                    })
+                    .on("end", (event, d) => {
+                        if (d.isGhost) return;
+                        store.draggingFeature = null;
+                        d3.select(".drag-ghost").remove();
+
+                        // Check drop
+                        const dropTarget = document.elementFromPoint(
+                            event.sourceEvent.pageX,
+                            event.sourceEvent.pageY,
+                        );
+
+                        if (dropTarget) {
+                            const dropZone = dropTarget.closest(".drop-zone");
+                            if (dropZone) {
+                                const zoneType =
+                                    dropZone.getAttribute("data-zone-type");
+                                if (zoneType === "x") {
+                                    store.draggedFeatureX = d.feature;
+                                } else if (zoneType === "color") {
+                                    store.draggedFeatureY = d.feature;
+                                }
+                            }
+                        }
+                    }),
+            );
 
         const colorScale = d3
             .scaleLinear()
@@ -757,90 +808,6 @@
 
         points.each(function (d) {
             const g = d3.select(this);
-
-            // D3 Drag Behavior
-            const dragBehavior = d3
-                .drag()
-                .on("start", (event) => {
-                    const featureName = d.isMerge ? d.feature : d.feature;
-
-                    // Create visual helper
-                    const helper = document.createElement("div");
-                    helper.id = "drag-helper";
-                    helper.innerText = featureName;
-                    helper.style.position = "fixed";
-                    helper.style.background = "white";
-                    helper.style.padding = "5px";
-                    helper.style.border = "1px solid #ccc";
-                    helper.style.borderRadius = "4px";
-                    helper.style.fontWeight = "bold";
-                    helper.style.zIndex = "9999";
-                    helper.style.pointerEvents = "none"; // Crucial so elementFromPoint sees what's under
-                    helper.style.left = event.sourceEvent.clientX + "px";
-                    helper.style.top = event.sourceEvent.clientY + "px";
-                    document.body.appendChild(helper);
-
-                    g.style("cursor", "grabbing");
-                    document.body.style.cursor = "grabbing"; // Global cursor for better UX
-                })
-                .on("drag", (event) => {
-                    const helper = document.getElementById("drag-helper");
-                    if (helper) {
-                        helper.style.left =
-                            event.sourceEvent.clientX + 10 + "px";
-                        helper.style.top =
-                            event.sourceEvent.clientY + 10 + "px";
-                    }
-
-                    // Visual feedback for drop zones
-                    const x = event.sourceEvent.clientX;
-                    const y = event.sourceEvent.clientY;
-                    const target = document.elementFromPoint(x, y);
-
-                    if (
-                        target &&
-                        (target.closest(".x-axis-drop") ||
-                            target.closest(".y-axis-drop"))
-                    ) {
-                        g.style("cursor", "copy");
-                        document.body.style.cursor = "copy";
-                        if (helper) helper.style.border = "2px solid #4CAF50"; // Green border as extra hint
-                    } else {
-                        g.style("cursor", "grabbing");
-                        document.body.style.cursor = "grabbing";
-                        if (helper) helper.style.border = "1px solid #ccc";
-                    }
-                })
-                .on("end", (event) => {
-                    const helper = document.getElementById("drag-helper");
-                    if (helper) {
-                        document.body.removeChild(helper);
-                    }
-                    // Reset cursor on the group element
-                    g.style("cursor", "grab");
-                    // Also ensure body cursor is reset just in case
-                    document.body.style.cursor = "default";
-
-                    // Find drop target
-                    const x = event.sourceEvent.clientX;
-                    const y = event.sourceEvent.clientY;
-                    const target = document.elementFromPoint(x, y);
-
-                    if (target) {
-                        const xAxisDrop = target.closest(".x-axis-drop");
-                        const yAxisDrop = target.closest(".y-axis-drop");
-                        const featureName = d.isMerge ? d.feature : d.feature;
-
-                        if (xAxisDrop) {
-                            store.draggedFeature1 = featureName;
-                        } else if (yAxisDrop) {
-                            store.draggedFeature2 = featureName;
-                        }
-                    }
-                });
-
-            // Apply drag behavior
-            g.style("cursor", "grab").call(dragBehavior);
 
             if (d.isGhost) {
                 if (store.isSelectedNew) {
