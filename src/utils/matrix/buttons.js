@@ -49,10 +49,10 @@ export function addButtonColumn(
         // Icon
         g.append("image")
             .attr("href", iconHref)
-            .attr("width", 20)
-            .attr("height", 20)
-            .attr("x", 5)
-            .attr("y", 5);
+            .attr("width", 18)
+            .attr("height", 18)
+            .attr("x", 3.5)
+            .attr("y", 3.5);
 
         if (additionalEnter) {
             additionalEnter(g, d);

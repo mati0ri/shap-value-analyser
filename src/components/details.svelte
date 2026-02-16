@@ -3,10 +3,15 @@
     import { store } from "../rune/store.svelte";
     import { untrack } from "svelte";
 
-    let container;
+    let container; // Outer container for width
+    let plotWrapper; // Inner wrapper for SVG/Canvas
     let width = $state(0);
-    let height = $state(0);
-    const margin = { top: 20, right: 80, bottom: 60, left: 100 }; // Increased left margin for drop zone
+    // height is no longer the driving factor for plot height
+
+    // Derived plot height
+    let plotHeight = $state(0);
+
+    const margin = { top: 18, right: 80, bottom: 60, left: 100 }; // Top reduced by 2px to account for border
 
     let canvas;
 
@@ -18,13 +23,18 @@
 
     function drawDetails() {
         console.time("drawDetails");
-        if (!container || !width || !height) {
+        if (!plotWrapper || !width) {
             console.timeEnd("drawDetails");
             return;
         }
 
+        // Calculate heights
+        const xAxisLen = width - margin.left - margin.right;
+        const yAxisLen = xAxisLen;
+        plotHeight = yAxisLen + margin.top + margin.bottom;
+
         // SVG for axes and legends
-        const wrapper = d3.select(container);
+        const wrapper = d3.select(plotWrapper);
         wrapper.selectAll("svg").remove();
 
         if (showPlaceholder) {
@@ -39,7 +49,7 @@
         const svg = wrapper
             .append("svg")
             .attr("width", width)
-            .attr("height", height)
+            .attr("height", plotHeight)
             .style("position", "absolute")
             .style("top", "0")
             .style("left", "0")
@@ -94,7 +104,7 @@
         const yScale = d3
             .scaleLinear()
             .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
-            .range([height - margin.bottom, margin.top]);
+            .range([plotHeight - margin.bottom, margin.top]);
         console.timeEnd("scales");
 
         // Color Scale
@@ -123,7 +133,7 @@
         // Axes
         console.time("axes");
         svg.append("g")
-            .attr("transform", `translate(0,${height - margin.bottom})`)
+            .attr("transform", `translate(0,${plotHeight - margin.bottom})`)
             .call(d3.axisBottom(xScale).ticks(5));
 
         svg.append("g")
@@ -134,8 +144,8 @@
         if (!secondaryFeature) {
             svg.append("text")
                 .attr("transform", "rotate(-90)")
-                .attr("x", -(height + margin.top - margin.bottom) / 2)
-                .attr("y", 50) // Moved inside
+                .attr("x", -(plotHeight + margin.top - margin.bottom) / 2)
+                .attr("y", 65) // Moved inside
                 .attr("text-anchor", "middle")
                 .attr("font-size", "12px")
                 .text(`SHAP Value (${primaryFeature})`);
@@ -149,7 +159,7 @@
 
         // Legend (if 2 features)
         if (secondaryFeature) {
-            legendY = (height - legendHeight) / 2;
+            legendY = (plotHeight - legendHeight) / 2;
             const legendWidth = 10;
 
             const defs = svg.append("defs");
@@ -230,12 +240,12 @@
             const dpr = window.devicePixelRatio || 1;
 
             canvas.width = width * dpr;
-            canvas.height = height * dpr;
+            canvas.height = plotHeight * dpr;
             canvas.style.width = `${width}px`;
-            canvas.style.height = `${height}px`;
+            canvas.style.height = `${plotHeight}px`;
 
             ctx.scale(dpr, dpr);
-            ctx.clearRect(0, 0, width, height);
+            ctx.clearRect(0, 0, width, plotHeight);
 
             // --- 1. X-Axis Histogram (Background) ---
             const xHistogram = d3
@@ -247,13 +257,13 @@
             const xBins = xHistogram(plotData);
             const xMax = d3.max(xBins, (d) => d.length);
 
-            const histHeight = (height - margin.bottom - margin.top) * 0.2;
+            const histHeight = (plotHeight - margin.bottom - margin.top) * 0.2;
             const yHistScale = d3
                 .scaleLinear()
                 .domain([0, xMax])
                 .range([0, histHeight]);
 
-            ctx.fillStyle = "#e0e0e0";
+            ctx.fillStyle = "#cccccc";
 
             xBins.forEach((bin) => {
                 if (bin.length === 0) return;
@@ -264,7 +274,7 @@
 
                 ctx.fillRect(
                     x0,
-                    height - margin.bottom - barHeight,
+                    plotHeight - margin.bottom - barHeight,
                     barWidth,
                     barHeight,
                 );
@@ -333,9 +343,13 @@
         store.raw_x;
         store.sv;
         store.x;
+        store.raw_x;
+        store.sv;
+        store.x;
         width;
-        height;
+        // height removed from dependencies as it's not used directly
         canvas;
+        plotWrapper;
         jitterX;
         jitterY;
         drawDetails();
@@ -345,111 +359,118 @@
 <div
     class="details-container"
     style="flex: {100 - store.graphWidthPercentage};"
-    bind:this={container}
     bind:clientWidth={width}
-    bind:clientHeight={height}
 >
-    <!-- Canvas for points -->
-    <canvas
-        bind:this={canvas}
-        style="position: absolute; top: 0; left: 0; pointer-events: none;"
-    ></canvas>
-
-    <!-- Drop Zones -->
     <div
-        class="drop-zone x-axis-zone"
-        data-zone-type="x"
-        class:active={store.draggingFeature}
+        bind:this={plotWrapper}
+        style="width: {width}px; height: {plotHeight}px; position: relative;"
     >
-        {#if store.draggedFeatureX}
-            <span>{store.draggedFeatureX}</span>
-            <button
-                class="remove-btn"
-                onclick={(e) => {
-                    e.stopPropagation();
-                    if (store.draggedFeatureY) {
-                        store.draggedFeatureX = store.draggedFeatureY;
-                        store.draggedFeatureY = null;
-                    } else {
-                        store.draggedFeatureX = null;
-                    }
-                }}
-            >
-                ×
-            </button>
-        {:else}
-            Drop A Feature Here
-        {/if}
-    </div>
+        <!-- Canvas for points -->
+        <canvas
+            bind:this={canvas}
+            style="position: absolute; top: 0; left: 0; pointer-events: none;"
+        ></canvas>
 
-    <!-- Only show color drop zone if X axis is populated -->
-    {#if store.draggedFeatureX}
+        <!-- Drop Zones -->
         <div
-            class="drop-zone color-axis-zone"
-            data-zone-type="color"
+            class="drop-zone x-axis-zone"
+            data-zone-type="x"
             class:active={store.draggingFeature}
         >
-            <div
-                style="transform: rotate(-90deg); white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 5px;"
-            >
-                {#if store.draggedFeatureY}
-                    <span>{store.draggedFeatureY}</span>
-                    <button
-                        class="remove-btn"
-                        onclick={(e) => {
-                            e.stopPropagation();
+            {#if store.draggedFeatureX}
+                <span>{store.draggedFeatureX}</span>
+                <button
+                    class="remove-btn"
+                    onclick={(e) => {
+                        e.stopPropagation();
+                        if (store.draggedFeatureY) {
+                            store.draggedFeatureX = store.draggedFeatureY;
                             store.draggedFeatureY = null;
-                        }}
-                    >
-                        ×
-                    </button>
-                {:else}
-                    Drop Second Feature Here
-                {/if}
-            </div>
+                        } else {
+                            store.draggedFeatureX = null;
+                        }
+                    }}
+                >
+                    ×
+                </button>
+            {:else}
+                Drop A Feature Here
+            {/if}
         </div>
 
-        <!-- Jitter Controls -->
-        <!-- X Axis Jitter: Bottom Right -->
-        <label
-            class="jitter-control"
-            style="bottom: 10px; right: 10px;"
-            title="Toggle X-Axis Jitter"
-        >
-            <input type="checkbox" bind:checked={jitterX} />
-            <span>Jitter X</span>
-        </label>
+        <!-- Only show color drop zone if X axis is populated -->
+        {#if store.draggedFeatureX}
+            <div
+                class="drop-zone color-axis-zone"
+                data-zone-type="color"
+                class:active={store.draggingFeature}
+            >
+                <div
+                    style="transform: rotate(-90deg); white-space: nowrap; display: flex; align-items: center; justify-content: center; gap: 5px;"
+                >
+                    {#if store.draggedFeatureY}
+                        <span>{store.draggedFeatureY}</span>
+                        <button
+                            class="remove-btn"
+                            onclick={(e) => {
+                                e.stopPropagation();
+                                store.draggedFeatureY = null;
+                            }}
+                        >
+                            ×
+                        </button>
+                    {:else}
+                        Drop Second Feature Here
+                    {/if}
+                </div>
+            </div>
 
-        <!-- Y Axis Jitter: Top Left -->
-        <label
-            class="jitter-control"
-            style="top: 10px; left: 10px;"
-            title="Toggle Y-Axis Jitter"
-        >
-            <input type="checkbox" bind:checked={jitterY} />
-            <span>Jitter Y</span>
-        </label>
-    {/if}
+            <!-- Jitter Controls -->
+            <!-- X Axis Jitter: Bottom Right -->
+            <label
+                class="jitter-control"
+                style="bottom: 10px; right: 10px;"
+                title="Toggle X-Axis Jitter"
+            >
+                <input type="checkbox" bind:checked={jitterX} />
+                <span>Jitter X</span>
+            </label>
 
-    {#if showPlaceholder}
-        <p class="placeholder-text">
-            Drag a feature from the list to the X-axis box below.
-        </p>
-    {/if}
+            <!-- Y Axis Jitter: Top Left -->
+            <label
+                class="jitter-control"
+                style="top: 10px; left: 10px;"
+                title="Toggle Y-Axis Jitter"
+            >
+                <input type="checkbox" bind:checked={jitterY} />
+                <span>Jitter Y</span>
+            </label>
+        {/if}
+
+        {#if showPlaceholder}
+            <p
+                class="placeholder-text"
+                style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 100%;"
+            >
+                Drag a feature from the list to the X-axis box below.
+            </p>
+        {/if}
+    </div>
 </div>
 
 <style>
     .details-container {
         height: 100%;
-        background-color: transparent;
+        background-color: #f5f5f5;
         border: 2px dashed #a1a1a1;
-        overflow: hidden;
+        overflow-y: auto;
         position: relative;
         min-width: 200px;
         border-radius: 8px;
-        display: flex;
-        justify-content: center;
-        align-items: center;
+        display: block;
+        /* display: flex; removed to ensure strict top alignment via block flow */
+        /* justify-content: center; */
+        /* align-items: flex-start; */
     }
 
     .placeholder-text {
@@ -487,7 +508,7 @@
     }
 
     .x-axis-zone {
-        bottom: 10px;
+        bottom: 0px;
         left: 50%;
         transform: translateX(-50%);
         width: 60%;

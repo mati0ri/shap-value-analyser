@@ -9,20 +9,28 @@
     let graphDiv;
 
     let width = $state(1100);
-    let height = $state(800);
+    let height = $state(800); // Container height (bound)
+
+    // Derived height to enforce square aspect ratio
+    let svgHeight = $state(800);
 
     $inspect(store.filtered_graph_data);
     $inspect(store.maxExpertDirection);
 
     function drawGraph() {
-        if (!width || !height) return;
+        if (!width) return; // Wait for width
 
         // ########### SETUP ###########
 
         const data = store.filtered_graph_data;
 
         // responsive dimensions are bound to width/height
-        const margin = { top: 20, right: 40, bottom: 55, left: 65 };
+        const margin = { top: 20, right: 40, bottom: 55, left: 75 };
+
+        // Enforce square aspect ratio: xAxisLen = yAxisLen
+        const xAxisLen = width - margin.left - margin.right;
+        const yAxisLen = xAxisLen;
+        svgHeight = yAxisLen + margin.top + margin.bottom;
 
         const wrapper = d3.select(graphDiv);
         // .style("border", "1px solid #ccc");
@@ -34,7 +42,7 @@
         const svg = wrapper
             .append("svg")
             .attr("width", width)
-            .attr("height", height)
+            .attr("height", svgHeight) // Use calculated height
             .style("position", "absolute")
             .style("top", "0")
             .style("left", "0");
@@ -62,14 +70,14 @@
             .domain([0, 1]);
         const y = d3
             .scaleLinear()
-            .range([height - margin.bottom, margin.top])
+            .range([svgHeight - margin.bottom, margin.top]) // Use svgHeight
             .domain([0, d3.max(data, (d) => d.feature_importance)])
             .nice(); // pour arrondir la val max
 
         // dessiner les axes
         svg.append("g")
             .attr("class", "x-axis")
-            .attr("transform", `translate(0,${height - margin.bottom})`)
+            .attr("transform", `translate(0,${svgHeight - margin.bottom})`) // Use svgHeight
             .call(d3.axisBottom(x).ticks(5));
 
         svg.append("g")
@@ -80,15 +88,15 @@
         // titres des axes
         svg.append("text")
             .attr("x", (margin.left + width - margin.right) / 2)
-            .attr("y", height - 6)
+            .attr("y", svgHeight - 6) // Use svgHeight
             .attr("text-anchor", "middle")
             .attr("font-size", 18)
             .text("Deterministic effect");
 
         svg.append("text")
             .attr("transform", `rotate(-90)`)
-            .attr("x", -(margin.top + height - margin.bottom) / 2)
-            .attr("y", 18)
+            .attr("x", -(margin.top + svgHeight - margin.bottom) / 2) // Use svgHeight
+            .attr("y", 28)
             .attr("text-anchor", "middle")
             .attr("font-size", 18)
             .text("Feature importance");
@@ -98,7 +106,7 @@
             .attr("x", x(0.6))
             .attr("y", margin.top)
             .attr("width", x(1) - x(0.6))
-            .attr("height", height - margin.top - margin.bottom)
+            .attr("height", svgHeight - margin.top - margin.bottom) // Use svgHeight
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
@@ -107,7 +115,7 @@
             .attr("x", x(0.8))
             .attr("y", margin.top)
             .attr("width", x(1) - x(0.8))
-            .attr("height", height - margin.top - margin.bottom)
+            .attr("height", svgHeight - margin.top - margin.bottom) // Use svgHeight
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
@@ -140,7 +148,7 @@
         const maxColor = store.maxColor;
 
         const legendW = 10;
-        const legendH = height - margin.top - margin.bottom;
+        const legendH = svgHeight - margin.top - margin.bottom; // Use svgHeight
         const legendX = width - margin.right + 12;
         const legendY = margin.top;
 
@@ -264,7 +272,7 @@
             }
 
             // Check bottom edge
-            if (ty + bbox.height > height) {
+            if (ty + bbox.height > svgHeight) {
                 ty = my - bbox.height - 15;
             }
 
@@ -300,7 +308,7 @@
             iconConfig.de.size,
             iconConfig.de.size,
             margin.left + 10,
-            height -
+            svgHeight -
                 margin.bottom +
                 iconConfig.de.yOffset -
                 iconConfig.de.size / 2,
@@ -313,7 +321,7 @@
             iconConfig.de.size,
             iconConfig.de.size,
             width - margin.right - iconConfig.de.size - 10,
-            height -
+            svgHeight -
                 margin.bottom +
                 iconConfig.de.yOffset -
                 iconConfig.de.size / 2,
@@ -327,7 +335,7 @@
             iconConfig.fi.size,
             iconConfig.fi.size,
             margin.left + iconConfig.fi.xOffset - iconConfig.fi.size / 2,
-            height - margin.bottom - iconConfig.fi.size - 15,
+            svgHeight - margin.bottom - iconConfig.fi.size - 15,
             "fi-faible",
         );
 
@@ -499,7 +507,7 @@
                 .attr("x1", cx)
                 .attr("x2", cx)
                 .attr("y1", cy)
-                .attr("y2", height - margin.bottom)
+                .attr("y2", svgHeight - margin.bottom)
                 .style("display", "block");
 
             guideLineX
@@ -519,7 +527,7 @@
             // labels guidelines
             xLabel
                 .attr("x", cx)
-                .attr("y", height - margin.bottom + 20)
+                .attr("y", svgHeight - margin.bottom + 20)
                 .attr("text-anchor", "middle")
                 .text(valX.toFixed(2))
                 .style("display", "block");
@@ -799,7 +807,7 @@
             xScale: x,
             yScale: y,
             width,
-            height,
+            height: svgHeight,
             margin,
             pointSize: store.pointSize,
             hideLabels: store.hideLabels,
@@ -1045,7 +1053,7 @@
                 xScale: x,
                 yScale: y,
                 width,
-                height,
+                height: svgHeight,
                 margin,
                 pointSize: store.pointSize,
                 hideLabels: store.hideLabels,
@@ -1116,7 +1124,7 @@
         const lassoRect = lassoGroup
             .append("rect")
             .attr("width", width)
-            .attr("height", height)
+            .attr("height", svgHeight)
             .attr("fill", "transparent")
             .style("cursor", "crosshair");
 
@@ -1308,5 +1316,5 @@
     bind:this={graphDiv}
     bind:clientWidth={width}
     bind:clientHeight={height}
-    style="flex: {store.graphWidthPercentage}; height: 100%; min-width: 400px; min-height: 400px; overflow: hidden; position: relative;"
+    style="flex: {store.graphWidthPercentage}; height: 100%; min-width: 400px; min-height: 400px; overflow-y: auto; position: relative;"
 ></div>

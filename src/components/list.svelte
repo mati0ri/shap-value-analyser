@@ -14,12 +14,12 @@
 
     let container;
 
-    let width = $state(550);
+    let width = $state(500);
     let height = $state(650);
     let padding = 10;
-    const rightMargin = 115; // Garder de l'espace a droite pour les boutons
+    const rightMargin = 100; // Garder de l'espace a droite pour les boutons
     let scrollTop = 0;
-    const ROW_HEIGHT = 40;
+    const ROW_HEIGHT = 35;
     let marginBottom = 0; // pixel perfect pour alignement avec le bas du graphe
 
     function handleScroll(event) {
@@ -135,6 +135,8 @@
                 store.hoveredMatrix = [];
             });
 
+        rowGroups.append("title").text((d) => d);
+
         // Selection Background Rect
         rowGroups
             .append("rect")
@@ -154,12 +156,12 @@
         // Row Labels
         rowGroups
             .append("text")
-            .attr("x", 20)
+            .attr("x", 10)
             .attr("y", ROW_HEIGHT / 2)
             .attr("dominant-baseline", "middle")
             .attr("text-anchor", "start")
             .attr("font-size", "15px")
-            .text((d) => d);
+            .text((d) => (d.length > 10 ? d.slice(0, 10) + "..." : d));
 
         // Drag Behavior
         rowGroups.call(
@@ -217,11 +219,11 @@
                 }),
         );
 
-        const buttonSize = 30;
+        const buttonSize = 25;
 
         // Boutons hide / show
         addButtonColumn(contentGroup, rowLabels, {
-            x: matrixWidth + 10,
+            x: matrixWidth + 5,
             y,
             rowHeight: ROW_HEIGHT,
             buttonSize,
@@ -241,7 +243,7 @@
 
         // Boutons delete pour features simples
         addButtonColumn(contentGroup, simpleFeatures, {
-            x: matrixWidth + 45,
+            x: matrixWidth + buttonSize + 10,
             y,
             rowHeight: ROW_HEIGHT,
             buttonSize,
@@ -251,7 +253,7 @@
 
         // Boutons rename pour features simples
         addButtonColumn(contentGroup, simpleFeatures, {
-            x: matrixWidth + 80,
+            x: matrixWidth + 2 * buttonSize + 15,
             y,
             rowHeight: ROW_HEIGHT,
             buttonSize,
@@ -261,7 +263,7 @@
 
         // Boutons delete pour merges
         addButtonColumn(contentGroup, mergeFeatures, {
-            x: matrixWidth + 45,
+            x: matrixWidth + buttonSize + 10,
             y,
             rowHeight: ROW_HEIGHT,
             buttonSize,
@@ -271,7 +273,7 @@
 
         // Boutons rename pour merges
         addButtonColumn(contentGroup, mergeFeatures, {
-            x: matrixWidth + 80,
+            x: matrixWidth + 2 * buttonSize + 15,
             y,
             rowHeight: ROW_HEIGHT,
             buttonSize,
@@ -296,11 +298,11 @@
         if (mergeFeatures.length === 0) {
             contentGroup
                 .append("text")
-                .attr("x", 20)
+                .attr("x", 0)
                 .attr("y", separatorY + ROW_HEIGHT / 2)
                 .attr("dominant-baseline", "middle")
                 .attr("text-anchor", "start")
-                .attr("font-size", "14px")
+                .attr("font-size", "12px")
                 .attr("fill", "grey")
                 .attr("font-style", "italic")
                 .attr("class", "static-text")
@@ -480,11 +482,11 @@
 
 <div
     class="matrix-wrapper"
-    style="flex: 0 0 20%; height: 100%; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 0px 0 0px; box-sizing: border-box;"
+    style="flex: 0 0 12%; height: 100%; min-width: 200px; display: flex; flex-direction: column; overflow: hidden; padding: 10px 0px 0 0px; box-sizing: border-box;"
 >
     <div style="margin-bottom: 8px;">
         <span style="font-size: 16px; font-weight: bold; color: black;">
-            {store.datasetName} dataset :
+            {store.datasetName} :
         </span>
         <span style="font-size: 15px; font-weight: normal; color: black;">
             {store.raw_x.length} instances

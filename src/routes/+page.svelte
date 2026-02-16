@@ -24,10 +24,7 @@
     </div>
 
     {#if store.isUploadPopupOpen}
-        <Popup>
-            <h2>Upload Dataset</h2>
-            <p>Upload functionality coming soon...</p>
-        </Popup>
+        <Popup/>
     {/if}
 </div>
 
