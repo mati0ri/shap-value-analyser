@@ -11,7 +11,7 @@
     // Derived plot height
     let plotHeight = $state(0);
 
-    const margin = { top: 18, right: 80, bottom: 60, left: 100 }; // Top reduced by 2px to account for border
+    const margin = { top: 18, right: 28, bottom: 170, left: 85 }; // Increased bottom for legend, reduced right
 
     let canvas;
 
@@ -92,19 +92,30 @@
         console.timeEnd("prepareData");
 
         // Scales
+        const JITTER_AMOUNT = 20;
+        const JITTER_GAP = jitterX ? JITTER_AMOUNT + 5 : 0;
+        const JITTER_GAP_Y = jitterY ? JITTER_AMOUNT + 5 : 0;
+
+        // Scales
         console.time("scales");
         const xExtent = d3.extent(plotData, (d) => d.x);
         const xScale = d3
             .scaleLinear()
             .domain(xExtent)
-            .range([margin.left, width - margin.right]);
+            .range([
+                margin.left + JITTER_GAP,
+                width - margin.right - JITTER_GAP,
+            ]);
 
         const yExtent = d3.extent(plotData, (d) => d.y);
-        const yPadding = (yExtent[1] - yExtent[0]) * 0.1 || 0.1;
+        // Remove default padding, use range padding for jitter instead
         const yScale = d3
             .scaleLinear()
-            .domain([yExtent[0] - yPadding, yExtent[1] + yPadding])
-            .range([plotHeight - margin.bottom, margin.top]);
+            .domain(yExtent)
+            .range([
+                plotHeight - margin.bottom - JITTER_GAP_Y,
+                margin.top + JITTER_GAP_Y,
+            ]);
         console.timeEnd("scales");
 
         // Color Scale
@@ -155,20 +166,21 @@
         let colorBinData = [];
         let legendY = 0;
         let legendHeight = 300;
-        let legendX = width - 40;
+        let legendX = margin.left;
 
         // Legend (if 2 features)
         if (secondaryFeature) {
-            legendY = (plotHeight - legendHeight) / 2;
-            const legendWidth = 10;
+            const legendWidth = xAxisLen;
+            const legendHeight = 10;
+            legendY = plotHeight - 45; // 45px from bottom
 
             const defs = svg.append("defs");
             const linearGradient = defs
                 .append("linearGradient")
                 .attr("id", "legend-gradient")
                 .attr("x1", "0%")
-                .attr("y1", "100%")
-                .attr("x2", "0%")
+                .attr("y1", "0%")
+                .attr("x2", "100%")
                 .attr("y2", "0%");
 
             linearGradient
@@ -195,39 +207,51 @@
 
             // Legend Label (Feature Name)
             svg.append("text")
-                .attr(
-                    "transform",
-                    `rotate(90, ${legendX + 25}, ${legendY + legendHeight / 2})`,
-                )
-                .attr("x", legendX + 25)
-                .attr("y", legendY + legendHeight / 2)
+                .attr("x", legendX + legendWidth / 2)
+                .attr("y", legendY + legendHeight + 15)
                 .attr("text-anchor", "middle")
                 .attr("font-size", "12px")
                 .text(`Sum SHAP (${primaryFeature} + ${secondaryFeature})`);
 
             // Low / High Labels
             const cExtent = d3.extent(plotData, (d) => d.colorVal);
+            const maxAbs = Math.max(Math.abs(cExtent[0]), Math.abs(cExtent[1]));
+            // Use same domain logic as colorScale for labels if symmetrical
+            let displayMin = cExtent[0];
+            let displayMax = cExtent[1];
+            if (cExtent[0] < 0 && cExtent[1] > 0) {
+                displayMin = -maxAbs;
+                displayMax = maxAbs;
+            }
 
             svg.append("text")
-                .attr("x", legendX + legendWidth / 2)
-                .attr("y", legendY + legendHeight + 10)
-                .attr("text-anchor", "middle")
+                .attr("x", legendX)
+                .attr("y", legendY + legendHeight + 12)
+                .attr("text-anchor", "start")
                 .attr("font-size", "10px")
-                .text(cExtent[0].toFixed(2));
+                .text(displayMin.toFixed(2));
 
             svg.append("text")
-                .attr("x", legendX + legendWidth / 2)
-                .attr("y", legendY - 3)
-                .attr("text-anchor", "middle")
+                .attr("x", legendX + legendWidth)
+                .attr("y", legendY + legendHeight + 12)
+                .attr("text-anchor", "end")
                 .attr("font-size", "10px")
-                .text(cExtent[1].toFixed(2));
+                .text(displayMax.toFixed(2));
 
             // Prepare Color Histogram Data
+            // We need to bin based on the full domain to match the visual width
+            let domain;
+            if (cExtent[0] < 0 && cExtent[1] > 0) {
+                domain = [-maxAbs, maxAbs];
+            } else {
+                domain = cExtent;
+            }
+
             const colorHistogram = d3
                 .bin()
                 .value((d) => d.colorVal)
-                .domain(cExtent)
-                .thresholds(10);
+                .domain(domain)
+                .thresholds(10); // Set to 10 bins as requested
 
             colorBinData = colorHistogram(plotData);
         }
@@ -283,29 +307,48 @@
             // --- 2. Color-Axis Histogram (Background) ---
             if (secondaryFeature && colorBinData.length > 0) {
                 const cMax = d3.max(colorBinData, (d) => d.length);
-                const histWidth = 30;
+
+                // Available height for histogram: above legend
+                const histBaseY = legendY;
+                const colorHistHeight = 50;
 
                 const cExtent = d3.extent(plotData, (d) => d.colorVal);
-                const yColorScale = d3
-                    .scaleLinear()
-                    .domain(cExtent)
-                    .range([legendY + legendHeight, legendY]);
+                const maxAbs = Math.max(
+                    Math.abs(cExtent[0]),
+                    Math.abs(cExtent[1]),
+                );
+                let domain;
+                if (cExtent[0] < 0 && cExtent[1] > 0) {
+                    domain = [-maxAbs, maxAbs];
+                } else {
+                    domain = cExtent;
+                }
 
                 const xColorScale = d3
                     .scaleLinear()
+                    .domain(domain)
+                    .range([margin.left, width - margin.right]); // Match x-axis range logic (adjust for legend width)
+
+                const yColorScale = d3
+                    .scaleLinear()
                     .domain([0, cMax])
-                    .range([0, histWidth]);
+                    .range([0, colorHistHeight]);
+
+                ctx.fillStyle = "#cccccc";
 
                 colorBinData.forEach((bin) => {
                     if (bin.length === 0) return;
-                    const y0 = yColorScale(bin.x0);
-                    const y1 = yColorScale(bin.x1);
-                    const barHeight = Math.max(0, y0 - y1 - 1);
-                    const barWidth = xColorScale(bin.length);
+                    const x0 = xColorScale(bin.x0);
+                    const x1 = xColorScale(bin.x1);
+                    const barWidth = Math.max(0, x1 - x0 - 1);
+                    // Ensure minimum height of 4px for non-empty bins
+                    const rawHeight = yColorScale(bin.length);
+                    const barHeight =
+                        bin.length > 0 ? Math.max(2, rawHeight) : 0;
 
                     ctx.fillRect(
-                        legendX - 5 - barWidth,
-                        y1,
+                        x0,
+                        histBaseY - barHeight,
                         barWidth,
                         barHeight,
                     );
@@ -313,7 +356,6 @@
             }
 
             const TWO_PI = Math.PI * 2;
-            const JITTER_AMOUNT = 20;
 
             // Draw points
             for (let i = 0; i < plotData.length; i++) {
@@ -429,7 +471,7 @@
             <!-- X Axis Jitter: Bottom Right -->
             <label
                 class="jitter-control"
-                style="bottom: 10px; right: 10px;"
+                style="bottom: 110px; right: 25px;"
                 title="Toggle X-Axis Jitter"
             >
                 <input type="checkbox" bind:checked={jitterX} />
@@ -461,7 +503,7 @@
 <style>
     .details-container {
         height: 100%;
-        background-color: #f5f5f5;
+        background-color: #e9e9e9;
         border: 2px dashed #a1a1a1;
         overflow-y: auto;
         position: relative;
@@ -508,7 +550,7 @@
     }
 
     .x-axis-zone {
-        bottom: 0px;
+        bottom: 110px;
         left: 50%;
         transform: translateX(-50%);
         width: 60%;

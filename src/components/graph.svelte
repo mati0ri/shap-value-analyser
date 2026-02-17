@@ -42,7 +42,7 @@
         const svg = wrapper
             .append("svg")
             .attr("width", width)
-            .attr("height", svgHeight) // Use calculated height
+            .attr("height", Math.max(svgHeight, height)) // Use calculated height or full container
             .style("position", "absolute")
             .style("top", "0")
             .style("left", "0");
@@ -64,26 +64,30 @@
 
         // axes
         // les echelles
+
+        // X = Feature Importance
         const x = d3
             .scaleLinear()
             .range([margin.left, width - margin.right])
-            .domain([0, 1]);
+            .domain([0, store.maxSHAP])
+            .nice();
+
+        // Y = Deterministic Effect
         const y = d3
             .scaleLinear()
             .range([svgHeight - margin.bottom, margin.top]) // Use svgHeight
-            .domain([0, d3.max(data, (d) => d.feature_importance)])
-            .nice(); // pour arrondir la val max
+            .domain([0, 1]);
 
         // dessiner les axes
         svg.append("g")
             .attr("class", "x-axis")
             .attr("transform", `translate(0,${svgHeight - margin.bottom})`) // Use svgHeight
-            .call(d3.axisBottom(x).ticks(5));
+            .call(d3.axisBottom(x).ticks(7));
 
         svg.append("g")
             .attr("class", "y-axis")
             .attr("transform", `translate(${margin.left},0)`)
-            .call(d3.axisLeft(y).ticks(7));
+            .call(d3.axisLeft(y).ticks(5));
 
         // titres des axes
         svg.append("text")
@@ -91,7 +95,7 @@
             .attr("y", svgHeight - 6) // Use svgHeight
             .attr("text-anchor", "middle")
             .attr("font-size", 18)
-            .text("Deterministic effect");
+            .text("Feature importance");
 
         svg.append("text")
             .attr("transform", `rotate(-90)`)
@@ -99,45 +103,47 @@
             .attr("y", 28)
             .attr("text-anchor", "middle")
             .attr("font-size", 18)
-            .text("Feature importance");
+            .text("Deterministic effect");
 
-        // Highlight region for deterministic_effect > 0.6
-        svg.append("rect")
-            .attr("x", x(0.6))
-            .attr("y", margin.top)
-            .attr("width", x(1) - x(0.6))
-            .attr("height", svgHeight - margin.top - margin.bottom) // Use svgHeight
-            .attr("fill", "var(--gradient-color)")
-            .attr("opacity", 0.05)
-            .style("pointer-events", "none");
-
-        svg.append("rect")
-            .attr("x", x(0.8))
-            .attr("y", margin.top)
-            .attr("width", x(1) - x(0.8))
-            .attr("height", svgHeight - margin.top - margin.bottom) // Use svgHeight
-            .attr("fill", "var(--gradient-color)")
-            .attr("opacity", 0.05)
-            .style("pointer-events", "none");
-
-        const maxY = y.domain()[1];
-
-        // Highlight region for feature_importance > 60% of axis
+        // Highlight region for deterministic_effect > 0.5 (Y-axis now)
+        // Correct region is from y(1) to y(0.5).
         svg.append("rect")
             .attr("x", margin.left)
-            .attr("y", margin.top)
+            .attr("y", y(1)) // margin.top
             .attr("width", width - margin.left - margin.right)
-            .attr("height", Math.max(0, y(maxY * 0.6) - margin.top))
+            .attr("height", y(0.5) - y(1))
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
 
-        // Highlight region for feature_importance > 80% of axis
+        // Highlight region for deterministic_effect > 0.75 (Y-axis now)
         svg.append("rect")
             .attr("x", margin.left)
-            .attr("y", margin.top)
+            .attr("y", y(1))
             .attr("width", width - margin.left - margin.right)
-            .attr("height", Math.max(0, y(maxY * 0.8) - margin.top))
+            .attr("height", y(0.75) - y(1))
+            .attr("fill", "var(--gradient-color)")
+            .attr("opacity", 0.05)
+            .style("pointer-events", "none");
+
+        const maxX = x.domain()[1];
+
+        // Highlight region for feature_importance > 50% of axis (X-axis now)
+        svg.append("rect")
+            .attr("x", x(maxX * 0.5))
+            .attr("y", margin.top)
+            .attr("width", x(maxX) - x(maxX * 0.5))
+            .attr("height", svgHeight - margin.top - margin.bottom)
+            .attr("fill", "var(--gradient-color)")
+            .attr("opacity", 0.05)
+            .style("pointer-events", "none");
+
+        // Highlight region for feature_importance > 75% of axis (X-axis now)
+        svg.append("rect")
+            .attr("x", x(maxX * 0.75))
+            .attr("y", margin.top)
+            .attr("width", x(maxX) - x(maxX * 0.75))
+            .attr("height", svgHeight - margin.top - margin.bottom)
             .attr("fill", "var(--gradient-color)")
             .attr("opacity", 0.05)
             .style("pointer-events", "none");
@@ -187,53 +193,17 @@
                 .attr("stop-color", s.color);
         });
 
-        // rectangle gradiant
-        // svg.append("rect")
-        //     .attr("class", "direction-legend")
-        //     .attr("x", legendX)
-        //     .attr("y", legendY)
-        //     .attr("width", legendW)
-        //     .attr("height", legendH)
-        //     .attr("fill", "url(#directionGrad)");
-
-        // axe avec les ticks a droite
-        const dirScale = d3
-            .scaleLinear()
-            .domain([-1, 1])
-            .range([legendH - 1, 0]);
-
-        // svg.append("g")
-        //     .attr("class", "dir-axis")
-        //     .attr("transform", `translate(${legendX + legendW},${legendY})`)
-        //     .call(d3.axisRight(dirScale).ticks(5))
-        //     .call((g) => g.select(".domain").remove()); // enlever la ligne de l'axe (je trouve ca plus joli)
-
-        // titre
-        // svg.append("text")
-        //     .attr("class", "direction-title")
-        //     .attr(
-        //         "transform",
-        //         `translate(${legendX + legendW + 50}, ${legendY + legendH / 2}) rotate(90)`,
-        //     )
-        //     .attr("text-anchor", "middle")
-        //     .attr("font-size", 18)
-        //     .text("Direction");
-
         // ########### ICONS ###########
 
         const iconConfig = {
             de: {
-                yOffset: 35,
-                size: 50,
-            },
-            fi: {
                 xOffset: -35,
                 size: 50,
             },
-            // dir: {
-            //     xOffset: 15,
-            //     size: 50,
-            // },
+            fi: {
+                yOffset: 35,
+                size: 50,
+            },
         };
 
         const iconTooltips = {
@@ -254,29 +224,22 @@
         function showIconTooltip(event, text) {
             const [mx, my] = d3.pointer(event, graphDiv);
 
-            iconTooltip
-                .style("display", "block")
-                // width is already set in initialization
-                .html(`<div>${text}</div>`);
+            iconTooltip.style("display", "block").html(`<div>${text}</div>`);
 
-            // Calculate position to keep within bounds
             const tooltipNode = iconTooltip.node();
             const bbox = tooltipNode.getBoundingClientRect();
 
             let tx = mx + 15;
             let ty = my + 15;
 
-            // Check right edge
             if (tx + bbox.width > width) {
                 tx = mx - bbox.width - 15;
             }
 
-            // Check bottom edge
             if (ty + bbox.height > svgHeight) {
                 ty = my - bbox.height - 15;
             }
 
-            // Check top edge (rare but possible for top icons)
             if (ty < 0) {
                 ty = my + 15;
             }
@@ -286,7 +249,6 @@
 
         const iconGroup = svg.append("g").attr("class", "axis-icons");
 
-        // Helper to append icon with tooltip
         function appendIcon(href, w, h, x, y, tooltipKey) {
             iconGroup
                 .append("image")
@@ -301,74 +263,53 @@
                 .on("mouseleave", () => iconTooltip.style("display", "none"));
         }
 
-        // Deterministic Effect Icons (X Axis)
-        // Faible (Low) -> 0
+        // Deterministic Effect Icons (Y Axis now)
+        // Faible (Low) -> 0 -> near bottom
         appendIcon(
             "/icones/axis/de-faible.svg",
             iconConfig.de.size,
             iconConfig.de.size,
-            margin.left + 10,
-            svgHeight -
-                margin.bottom +
-                iconConfig.de.yOffset -
-                iconConfig.de.size / 2,
+            margin.left + iconConfig.de.xOffset - iconConfig.de.size / 2, // Left of Y axis
+            svgHeight - margin.bottom - iconConfig.de.size - 15,
             "de-faible",
         );
 
-        // Fort (High) -> 1
+        // Fort (High) -> 1 -> near top
         appendIcon(
             "/icones/axis/de-fort.svg",
             iconConfig.de.size,
             iconConfig.de.size,
-            width - margin.right - iconConfig.de.size - 10,
-            svgHeight -
-                margin.bottom +
-                iconConfig.de.yOffset -
-                iconConfig.de.size / 2,
+            margin.left + iconConfig.de.xOffset - iconConfig.de.size / 2, // Left of Y axis
+            margin.top + 15,
             "de-fort",
         );
 
-        // Feature Importance Icons (Y Axis)
-        // Faible (Low) -> 0 (Bottom)
+        // Feature Importance Icons (X Axis now)
+        // Faible (Low) -> 0 -> near left
         appendIcon(
             "/icones/axis/fi-faible.svg",
             iconConfig.fi.size,
             iconConfig.fi.size,
-            margin.left + iconConfig.fi.xOffset - iconConfig.fi.size / 2,
-            svgHeight - margin.bottom - iconConfig.fi.size - 15,
+            margin.left + 10,
+            svgHeight -
+                margin.bottom +
+                iconConfig.fi.yOffset -
+                iconConfig.fi.size / 2,
             "fi-faible",
         );
 
-        // Fort (High) -> Max (Top)
+        // Fort (High) -> Max -> near right
         appendIcon(
             "/icones/axis/fi-fort.svg",
             iconConfig.fi.size,
             iconConfig.fi.size,
-            margin.left + iconConfig.fi.xOffset - iconConfig.fi.size / 2,
-            margin.top + 15,
+            width - margin.right - iconConfig.fi.size - 10,
+            svgHeight -
+                margin.bottom +
+                iconConfig.fi.yOffset -
+                iconConfig.fi.size / 2,
             "fi-fort",
         );
-
-        // // Direction Icons (Legend Axis)
-        // // Faible (Low) -> -1 (Bottom)
-        // appendIcon(
-        //     "/icones/axis/dir-faible.svg",
-        //     iconConfig.dir.size,
-        //     iconConfig.dir.size,
-        //     legendX + legendW + iconConfig.dir.xOffset,
-        //     legendY + legendH - iconConfig.dir.size - 15,
-        //     "dir-faible",
-        // );
-
-        // // Fort (High) -> 1 (Top)
-        // appendIcon(
-        //     "/icones/axis/dir-fort.svg",
-        //     iconConfig.dir.size,
-        //     iconConfig.dir.size,
-        //     legendX + legendW + iconConfig.dir.xOffset,
-        //     legendY + 15,
-        //     "dir-fort",
-        // );
 
         // ########### GUIDES & LABELS ###########
         const guideGroup = svg.append("g").attr("class", "guides");
@@ -385,12 +326,6 @@
             .attr("stroke-width", 1)
             .attr("stroke-dasharray", "1 5");
 
-        // const guideLineDir = guideGroup
-        //     .append("line")
-        //     .attr("stroke", "#666")
-        //     .attr("stroke-width", 1)
-        //     .attr("stroke-dasharray", "1 5");
-
         // Backgrounds for labels
         const xLabelBg = guideGroup
             .append("rect")
@@ -406,13 +341,6 @@
             .attr("rx", 2)
             .style("display", "none");
 
-        // const dirLabelBg = guideGroup
-        //     .append("rect")
-        //     .attr("fill", "var(--background-color)")
-        //     .attr("opacity", 0.8)
-        //     .attr("rx", 2)
-        //     .style("display", "none");
-
         const xLabel = guideGroup
             .append("text")
             .attr("font-size", 14)
@@ -425,15 +353,8 @@
             .attr("font-weight", "bold")
             .style("display", "none");
 
-        // const dirLabel = guideGroup
-        //     .append("text")
-        //     .attr("font-size", 14)
-        //     .attr("font-weight", "bold")
-        //     .style("display", "none");
-
         // ########### LIENS GRIS MERGES SELECTIONNES ###########
 
-        // traits gris qui s'affichent quand des merges sont sélectionnés (ou toutes les features d'un merge = la meme chose)
         const selectedLinksGroup = svg
             .append("g")
             .attr("class", "merge-selected-links");
@@ -450,18 +371,20 @@
                         const finalLinks = computeLinks(d, data);
 
                         finalLinks.forEach(({ parent, child }) => {
-                            const px = x(
+                            // Link coords updated: X=FI, Y=DE
+                            const px = x(parent.feature_importance);
+                            const py = y(
                                 store.expertMode
                                     ? parent.expert_deterministic_effect
                                     : parent.deterministic_effect,
                             );
-                            const py = y(parent.feature_importance);
-                            const cx = x(
+
+                            const cx = x(child.feature_importance);
+                            const cy = y(
                                 store.expertMode
                                     ? child.expert_deterministic_effect
                                     : child.deterministic_effect,
                             );
-                            const cy = y(child.feature_importance);
 
                             selectedLinksGroup
                                 .append("line")
@@ -479,17 +402,18 @@
 
         // ########### FONCTIONS HOVER ###########
 
-        // traits violets (hover sur un merge)
         const hoverMergeLinksGroup = svg
             .append("g")
             .attr("class", "merge-lines");
 
         function hoverCircle(d) {
-            const valX = store.expertMode
+            // Hover logic updated
+            const valY = store.expertMode
                 ? d.expert_deterministic_effect
                 : d.deterministic_effect;
-            const cx = x(valX);
-            const cy = y(d.feature_importance);
+
+            const px = x(d.feature_importance);
+            const py = y(valY);
 
             labelGroup
                 .selectAll("text")
@@ -503,33 +427,29 @@
                 );
 
             // lignes guidelines
+            // Vertical line down to X axis (FI)
             guideLineY
-                .attr("x1", cx)
-                .attr("x2", cx)
-                .attr("y1", cy)
+                .attr("x1", px)
+                .attr("x2", px)
+                .attr("y1", py)
                 .attr("y2", svgHeight - margin.bottom)
                 .style("display", "block");
 
+            // Horizontal line left to Y axis (DE)
             guideLineX
                 .attr("x1", margin.left)
-                .attr("x2", cx)
-                .attr("y1", cy)
-                .attr("y2", cy)
+                .attr("x2", px)
+                .attr("y1", py)
+                .attr("y2", py)
                 .style("display", "block");
 
-            // guideLineDir
-            //     .attr("x1", cx)
-            //     .attr("x2", legendX)
-            //     .attr("y1", cy)
-            //     .attr("y2", legendY + dirScale(d.direction))
-            //     .style("display", "block");
-
             // labels guidelines
+            // X Label (Feature Importance)
             xLabel
-                .attr("x", cx)
+                .attr("x", px)
                 .attr("y", svgHeight - margin.bottom + 20)
                 .attr("text-anchor", "middle")
-                .text(valX.toFixed(2))
+                .text(d.feature_importance.toFixed(2))
                 .style("display", "block");
 
             const xBBox = xLabel.node().getBBox();
@@ -540,11 +460,12 @@
                 .attr("height", xBBox.height + 2)
                 .style("display", "block");
 
+            // Y Label (Deterministic Effect)
             yLabel
                 .attr("x", margin.left - 7)
-                .attr("y", cy + 4)
+                .attr("y", py + 4)
                 .attr("text-anchor", "end")
-                .text(d.feature_importance.toFixed(2))
+                .text(valY.toFixed(2))
                 .style("display", "block");
 
             const yBBox = yLabel.node().getBBox();
@@ -555,42 +476,27 @@
                 .attr("height", yBBox.height + 2)
                 .style("display", "block");
 
-            // dirLabel
-            //     .attr("x", legendX + legendW + 8)
-            //     .attr("y", legendY + dirScale(d.direction))
-            //     .text(d.direction.toFixed(2))
-            //     .style("display", "block");
-
-            // const dirBBox = dirLabel.node().getBBox();
-            // dirLabelBg
-            //     .attr("x", dirBBox.x - 2)
-            //     .attr("y", dirBBox.y - 1)
-            //     .attr("width", dirBBox.width + 4)
-            //     .attr("height", dirBBox.height + 2)
-            //     .style("display", "block");
-
             // ###### LOGIQUE LINKS ######
 
             hoverMergeLinksGroup.selectAll("*").remove();
-
-            let allLinks = [];
 
             if (d.isMerge) {
                 const finalLinks = computeLinks(d, data);
 
                 finalLinks.forEach(({ parent, child }) => {
-                    const pbX = store.expertMode
+                    const pbY = store.expertMode
                         ? parent.expert_deterministic_effect
                         : parent.deterministic_effect;
-                    const cbX = store.expertMode
+                    const cbY = store.expertMode
                         ? child.expert_deterministic_effect
                         : child.deterministic_effect;
+
                     hoverMergeLinksGroup
                         .append("line")
-                        .attr("x1", x(pbX))
-                        .attr("y1", y(parent.feature_importance))
-                        .attr("x2", x(cbX))
-                        .attr("y2", y(child.feature_importance))
+                        .attr("x1", x(parent.feature_importance))
+                        .attr("y1", y(pbY))
+                        .attr("x2", x(child.feature_importance))
+                        .attr("y2", y(cbY))
                         .attr("stroke", store.colorSelectedStroke + 80)
                         .attr("stroke-width", 1.5);
                 });
@@ -602,7 +508,6 @@
                 .attr("stroke", (d) => {
                     if (d.isGhost) return store.colorStroke;
                     if (d.isMerge) {
-                        // Merge : check si tous les enfants sont sélectionnés
                         const allChildrenSelected = d.children.every((c) =>
                             store.selectedFeatures.includes(c),
                         );
@@ -638,15 +543,12 @@
 
             guideLineX.style("display", "none");
             guideLineY.style("display", "none");
-            // guideLineDir.style("display", "none");
 
             xLabel.style("display", "none");
             yLabel.style("display", "none");
-            // dirLabel.style("display", "none");
 
             xLabelBg.style("display", "none");
             yLabelBg.style("display", "none");
-            // dirLabelBg.style("display", "none");
 
             hoverMergeLinksGroup.selectAll("*").remove();
 
@@ -655,7 +557,6 @@
                 .attr("stroke", (d) => {
                     if (d.isGhost) return store.colorStroke;
                     if (d.isMerge) {
-                        // Merge : check si tous les enfants sont sélectionnés
                         const allChildrenSelected = d.children.every((c) =>
                             store.selectedFeatures.includes(c),
                         );
@@ -702,7 +603,7 @@
             .attr(
                 "transform",
                 (d) =>
-                    `translate(${x(untrack(() => store.expertMode) ? d.expert_deterministic_effect : d.deterministic_effect)}, ${y(d.feature_importance)})`,
+                    `translate(${x(d.feature_importance)}, ${y(untrack(() => store.expertMode) ? d.expert_deterministic_effect : d.deterministic_effect)})`,
             )
             .style("cursor", "pointer")
             .on("click", (event, d) => {
@@ -795,9 +696,10 @@
             .domain([-1, 0, 1])
             .range([minColor, midColor, maxColor]);
 
-        // Préparer les données pour le layout : on simule que 'deterministic_effect' est la valeur experte si besoin
+        // Préparer les données pour le layout
         const layoutData = data.map((d) => ({
             ...d,
+            feature_importance: d.feature_importance,
             deterministic_effect: untrack(() => store.expertMode)
                 ? d.expert_deterministic_effect
                 : d.deterministic_effect,
@@ -909,11 +811,11 @@
                 const originalData = data.find(
                     (item) => item.feature === d.feature,
                 );
-                const valX = store.expertMode
+                const valY = store.expertMode
                     ? originalData.expert_deterministic_effect
                     : originalData.deterministic_effect;
-                const px = x(valX);
-                const py = y(originalData.feature_importance);
+                const px = x(originalData.feature_importance);
+                const py = y(valY);
 
                 const dist = Math.sqrt(
                     Math.pow(d.x - px, 2) + Math.pow(d.y - py, 2),
@@ -994,10 +896,10 @@
                 .transition()
                 .duration(1000)
                 .attr("transform", (d) => {
-                    const valX = isExpert
+                    const valY = isExpert
                         ? d.expert_deterministic_effect
                         : d.deterministic_effect;
-                    return `translate(${x(valX)}, ${y(d.feature_importance)})`;
+                    return `translate(${x(d.feature_importance)}, ${y(valY)})`;
                 });
 
             // 2. Translation Arrows
@@ -1005,16 +907,16 @@
 
             if (isExpert) {
                 points.each((d) => {
-                    const classicX = x(d.deterministic_effect);
-                    const expertX = x(d.expert_deterministic_effect);
-                    const py = y(d.feature_importance);
+                    const px = x(d.feature_importance);
+                    const classicY = y(d.deterministic_effect);
+                    const expertY = y(d.expert_deterministic_effect);
 
                     translationArrowsGroup
                         .append("line")
-                        .attr("x2", classicX)
-                        .attr("y2", py)
-                        .attr("x1", expertX)
-                        .attr("y1", py)
+                        .attr("x1", px)
+                        .attr("y1", expertY)
+                        .attr("x2", px)
+                        .attr("y2", classicY)
                         .attr("stroke", "#ccc")
                         .attr("stroke-width", 1.5)
                         .attr("stroke-dasharray", "4, 2")
@@ -1069,15 +971,6 @@
                 .duration(1000)
                 .attr("transform", (d) => `translate(${d.x}, ${d.y})`);
 
-            // Re-draw connection lines after transition (or during? lines hard to transition efficiently without complex join)
-            // Ideally we transition lines. Creating new lines is easier.
-            // Let's just draw them at the end or try to transition.
-            // Since `labelLinesGroup` was cleared, we can't transition.
-            // Let's add them back immediately for new positions? No, checking distance is needed.
-            // We'll skip animating lines for now or just set them at the end.
-            // Simpler: Just update lines at the end of transition?
-            // Actually, let's just redraw lines after calculation. They might jump.
-            // Users asked for "x translation + arrow rotation".
             newLabelLayout.forEach((label) => {
                 const dist = Math.sqrt(
                     Math.pow(label.x - label.anchorX, 2) +
@@ -1086,7 +979,7 @@
 
                 if (dist > 40) {
                     labelLinesGroup
-                        .append("line") // This will jump. It's acceptable for now as lines are minor.
+                        .append("line")
                         .attr("data-feature", label.feature)
                         .attr("x1", label.anchorX)
                         .attr("y1", label.anchorY)
@@ -1102,11 +995,7 @@
             });
 
             // 4. Update Merges Lines (selected)
-            updateMergeSelectedLinks(); // This rebuilds lines immediately, might jump.
-            // To animate, we'd need to select and transition.
-            // Let's leave it jumping for now as per "x translation + arrow rotation" request.
-            // Actually, updateMergeSelectedLinks uses `store.expertMode` which is now updated.
-            // We can perhaps improve it but let's stick to core request first.
+            updateMergeSelectedLinks();
         }
 
         // ########### LASSO LAYER ###########
@@ -1163,8 +1052,10 @@
                     // Data points consist of 'data' array
                     data.forEach((d) => {
                         if (d.isGhost) return;
-                        const px = x(d.deterministic_effect);
-                        const py = y(d.feature_importance);
+
+                        // Updated for X=FI, Y=DE
+                        const px = x(d.feature_importance);
+                        const py = y(d.deterministic_effect);
 
                         if (d3.polygonContains(lassoPolygon, [px, py])) {
                             if (d.isMerge) {
@@ -1211,6 +1102,81 @@
 
         function updateLassoVisuals(isActive) {
             lassoRect.style("pointer-events", isActive ? "all" : "none");
+        }
+
+        // ########### HISTOGRAM ###########
+
+        const histoYStart = svgHeight;
+        const histoHeight = Math.max(0, height - histoYStart);
+
+        if (histoHeight > 20 && store.maxSHAP > 0) {
+            const counts = store.instanceDistribution;
+            const maxCount = Math.max(...counts);
+
+            // X scale for bins (aligns with main X axis)
+            // Each bin covers (maxSHAP/10) width
+            const binWidthVal = store.maxSHAP / 10;
+
+            // Y scale for histogram (counts)
+            const yHisto = d3
+                .scaleLinear()
+                .domain([0, maxCount])
+                .range([
+                    histoYStart + histoHeight - margin.bottom,
+                    histoYStart + 10,
+                ]);
+            // Using margin.bottom from main graph as padding at bottom of container?
+            // Or just a small padding. Let's use 10px.
+            // Re-evaluation: "using all the y place available".
+            // I'll stick to bottom of container minus small padding.
+
+            const yHistoFinal = d3
+                .scaleLinear()
+                .domain([0, maxCount])
+                .range([histoYStart + histoHeight - 5, histoYStart + 5]);
+
+            const histogramGroup = svg
+                .append("g")
+                .attr("class", "histogram-group");
+
+            counts.forEach((count, i) => {
+                if (count === 0) return;
+
+                const valStart = (i * store.maxSHAP) / 10;
+                const valEnd = ((i + 1) * store.maxSHAP) / 10;
+
+                const x0 = x(valStart);
+                const x1 = x(valEnd);
+                const barWidth = Math.max(0, x1 - x0 - 1); // 1px gap
+
+                const y0 = yHistoFinal(0);
+                const y1 = yHistoFinal(count);
+                const barHeight = y0 - y1;
+
+                histogramGroup
+                    .append("rect")
+                    .attr("x", x0)
+                    .attr("y", y1)
+                    .attr("width", barWidth)
+                    .attr("height", barHeight)
+                    .attr("fill", "#ccc")
+                    .attr("opacity", 0.6)
+                    // Optional tooltip for count
+                    .append("title")
+                    .text(
+                        `Range: [${valStart.toFixed(2)}, ${valEnd.toFixed(2)}]\nCount: ${count}`,
+                    );
+            });
+
+            // Add baseline
+            histogramGroup
+                .append("line")
+                .attr("x1", margin.left)
+                .attr("x2", width - margin.right)
+                .attr("y1", yHistoFinal(0))
+                .attr("y2", yHistoFinal(0))
+                .attr("stroke", "#ccc")
+                .attr("stroke-width", 1);
         }
 
         return {

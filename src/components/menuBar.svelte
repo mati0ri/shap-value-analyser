@@ -325,8 +325,8 @@
                 <input
                     id="graphWidthSlider"
                     type="range"
-                    min="25"
-                    max="75"
+                    min="40"
+                    max="60"
                     step="5"
                     bind:value={store.graphWidthPercentage}
                 />

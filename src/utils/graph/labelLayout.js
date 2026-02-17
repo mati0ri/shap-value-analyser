@@ -14,8 +14,9 @@ export function computeGreedyLayout(data, {
     // points
     data.forEach((d) => {
         if (d.isGhost) return;
-        const px = xScale(d.deterministic_effect);
-        const py = yScale(d.feature_importance);
+        // Updated: X=FI, Y=DE
+        const px = xScale(d.feature_importance);
+        const py = yScale(d.deterministic_effect);
         const r = pointSize + 5;
 
         obstacles.push({
@@ -34,8 +35,9 @@ export function computeGreedyLayout(data, {
             feature: d.feature,
             width: d.feature.length * 7,
             height: 14,
-            anchorX: xScale(d.deterministic_effect),
-            anchorY: yScale(d.feature_importance),
+            // Updated: X=FI, Y=DE
+            anchorX: xScale(d.feature_importance),
+            anchorY: yScale(d.deterministic_effect),
             x: 0,
             y: 0,
         }));

@@ -60,6 +60,7 @@ class Store {
     );
 
     recomendedMerges = $state(null);
+    maxSHAP = $state(0);
 
     // colors
     colorStroke = "#a1a1a1";
@@ -121,13 +122,71 @@ class Store {
         // sv 
         this.sv = data.sv;
 
-        // others
+        // Calculate maxSHAP
+        // Sum of absolute SHAP values for each row in sv
+        if (this.sv && this.sv.length > 0) {
+            const svKeys = Object.keys(this.sv[0]);
+            let max = 0;
+
+            for (const row of this.sv) {
+                let rowSum = 0;
+
+                for (const key of svKeys) {
+                    rowSum += Number(row[key] || 0);
+                }
+
+                const absSum = Math.abs(rowSum);
+
+                if (absSum > max) {
+                    max = absSum;
+                }
+            }
+            this.maxSHAP = max;
+        } else {
+            this.maxSHAP = 0;
+        }
+
         this.allFeatures = keys;
 
         create_data(this.allFeatures)
         // this.recomendedMerges = findInterestingMerges();
 
     }
+
+
+    instanceDistribution = $derived.by(() => {
+        const features = this.selectedFeatures.length > 0 ? this.selectedFeatures : this.allFeatures;
+
+        if (!this.maxSHAP || this.maxSHAP === 0) return Array(10).fill(0);
+        if (!this.sv || this.sv.length === 0) return Array(10).fill(0);
+
+        const binSize = this.maxSHAP / 10;
+        const bins = Array(10).fill(0);
+
+        // Iterate over all instances
+        for (const row of this.sv) {
+            let sum = 0;
+            for (const feature of features) {
+                // Ensure we access the correct SHAP column
+                // Assuming keys in sv are `shap_${feature}`
+                const key = `shap_${feature}`;
+                // If the key doesn't exist, we might need to handle it, but based on context it should.
+                // However, simpler way might be to check if key exists or just map.
+                // But let's stick to the assumption.
+                sum += Number(row[key] || 0);
+            }
+            const absSum = Math.abs(sum);
+
+            // Determine bin index
+            let binIndex = Math.floor(absSum / binSize);
+            // Clamp to last bin if equals max
+            if (binIndex >= 10) binIndex = 9;
+
+            bins[binIndex]++;
+        }
+
+        return bins;
+    });
 
 }
 
