@@ -69,7 +69,7 @@
         const x = d3
             .scaleLinear()
             .range([margin.left, width - margin.right])
-            .domain([0, store.maxSHAP])
+            .domain([0, d3.max(data, (d) => d.feature_importance)])
             .nice();
 
         // Y = Deterministic Effect
@@ -1113,9 +1113,11 @@
             const counts = store.instanceDistribution;
             const maxCount = Math.max(...counts);
 
-            // X scale for bins (aligns with main X axis)
-            // Each bin covers (maxSHAP/10) width
-            const binWidthVal = store.maxSHAP / 10;
+            // X scale for histogram (fixed 0 to maxSHAP)
+            const xHistoScale = d3
+                .scaleLinear()
+                .range([margin.left, width - margin.right])
+                .domain([0, store.maxSHAP]);
 
             // Y scale for histogram (counts)
             const yHisto = d3
@@ -1125,10 +1127,6 @@
                     histoYStart + histoHeight - margin.bottom,
                     histoYStart + 10,
                 ]);
-            // Using margin.bottom from main graph as padding at bottom of container?
-            // Or just a small padding. Let's use 10px.
-            // Re-evaluation: "using all the y place available".
-            // I'll stick to bottom of container minus small padding.
 
             const yHistoFinal = d3
                 .scaleLinear()
@@ -1139,14 +1137,31 @@
                 .append("g")
                 .attr("class", "histogram-group");
 
+            // Highlight rectangle for the current graph view range
+            const currentXDomain = x.domain();
+            const highlightX = xHistoScale(Math.max(0, currentXDomain[0]));
+            const highlightWidth =
+                xHistoScale(Math.min(store.maxSHAP, currentXDomain[1])) -
+                highlightX;
+
+            histogramGroup
+                .append("rect")
+                .attr("x", highlightX)
+                .attr("y", histoYStart + 5)
+                .attr("width", Math.max(0, highlightWidth))
+                .attr("height", histoHeight - 5)
+                .attr("fill", "var(--gradient-color)")
+                .attr("opacity", 0.1)
+                .style("pointer-events", "none");
+
             counts.forEach((count, i) => {
                 if (count === 0) return;
 
                 const valStart = (i * store.maxSHAP) / 10;
                 const valEnd = ((i + 1) * store.maxSHAP) / 10;
 
-                const x0 = x(valStart);
-                const x1 = x(valEnd);
+                const x0 = xHistoScale(valStart);
+                const x1 = xHistoScale(valEnd);
                 const barWidth = Math.max(0, x1 - x0 - 1); // 1px gap
 
                 const y0 = yHistoFinal(0);
