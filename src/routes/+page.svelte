@@ -7,10 +7,30 @@
     import Popup from "../components/Popup.svelte";
 
     import { store } from "../rune/store.svelte";
-    let { data } = $props();
 
-    // Pass the dataset name (currentStudy) to initialize
-    store.initialize(data, data.currentStudy);
+    import xCsv from "../data/Titanic/x.csv?raw";
+    import yCsv from "../data/Titanic/y.csv?raw";
+    import svCsv from "../data/Titanic/sv.csv?raw";
+
+    function csvToArray(csv) {
+        const [headerLine, ...lines] = csv.trim().split("\n");
+        const headers = headerLine.split(",");
+
+        return lines.map((line) => {
+            const values = line.split(",");
+            return headers.reduce((obj, key, i) => {
+                const val = values[i];
+                obj[key] = isNaN(val) ? val : Number(val);
+                return obj;
+            }, {});
+        });
+    }
+
+    const x = csvToArray(xCsv);
+    const y = csvToArray(yCsv);
+    const sv = csvToArray(svCsv);
+
+    store.initialize({ x, y, sv }, "Titanic");
 </script>
 
 <div class="container">
@@ -24,7 +44,7 @@
     </div>
 
     {#if store.isUploadPopupOpen}
-        <Popup/>
+        <Popup />
     {/if}
 </div>
 

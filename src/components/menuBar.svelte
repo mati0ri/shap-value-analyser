@@ -2,6 +2,33 @@
     import { store } from "../rune/store.svelte";
     import { cleanGhost, create_data } from "../functions/create_data";
 
+    const xModules = import.meta.glob("../data/*/x.csv", {
+        query: "?raw",
+        import: "default",
+    });
+    const yModules = import.meta.glob("../data/*/y.csv", {
+        query: "?raw",
+        import: "default",
+    });
+    const svModules = import.meta.glob("../data/*/sv.csv", {
+        query: "?raw",
+        import: "default",
+    });
+
+    function csvToArray(csv) {
+        const [headerLine, ...lines] = csv.trim().split("\n");
+        const headers = headerLine.split(",");
+
+        return lines.map((line) => {
+            const values = line.split(",");
+            return headers.reduce((obj, key, i) => {
+                const val = values[i];
+                obj[key] = isNaN(val) ? val : Number(val);
+                return obj;
+            }, {});
+        });
+    }
+
     function handleMerge() {
         const selected = store.selectedFeatures;
 
@@ -130,11 +157,35 @@
     async function loadStudy(studyName) {
         showDataset = false;
         try {
-            const res = await fetch(`/api/study?study=${studyName}`);
-            if (!res.ok) throw new Error("Failed to load study");
+            const xKey = Object.keys(xModules).find(
+                (k) =>
+                    k.toLowerCase() ===
+                    `../data/${studyName.toLowerCase()}/x.csv`,
+            );
+            const yKey = Object.keys(yModules).find(
+                (k) =>
+                    k.toLowerCase() ===
+                    `../data/${studyName.toLowerCase()}/y.csv`,
+            );
+            const svKey = Object.keys(svModules).find(
+                (k) =>
+                    k.toLowerCase() ===
+                    `../data/${studyName.toLowerCase()}/sv.csv`,
+            );
 
-            const data = await res.json();
-            store.initialize(data, studyName);
+            if (!xKey || !yKey || !svKey) {
+                throw new Error("Study data not found for " + studyName);
+            }
+
+            const xCsv = await xModules[xKey]();
+            const yCsv = await yModules[yKey]();
+            const svCsv = await svModules[svKey]();
+
+            const x = csvToArray(xCsv);
+            const y = csvToArray(yCsv);
+            const sv = csvToArray(svCsv);
+
+            store.initialize({ x, y, sv }, studyName);
         } catch (err) {
             console.error(err);
             alert("Error loading study: " + err.message);
