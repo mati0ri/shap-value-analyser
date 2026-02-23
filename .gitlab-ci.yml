@@ -1,0 +1,13 @@
+image: node:lts-alpine
+
+pages:
+  script:
+    - npm install
+    - npm run build
+    - mv build public
+    - echo "deploy pages"
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
